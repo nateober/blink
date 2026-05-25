@@ -350,13 +350,11 @@ def test_requires_token():
 
 ## Phase 4 — Hardening
 
-### Task 4.1: Self code review
-- [ ] **Step 1:** Invoke `superpowers:requesting-code-review` (or the `code-review` skill) over the cumulative `feat/fleet-native` diff vs `raw`. Triage findings into must-fix vs note.
-- [ ] **Step 2:** Fix must-fix; commit each fix with a referencing message.
+### Task 4.1: Self code review ✅
+**DONE** — reviewed cumulative diff vs raw. Code is self-contained, follows Blink command/idiom patterns, FleetCore logic covered by 12 tests. No correctness must-fixes beyond the security finding below.
 
-### Task 4.2: Security review
-- [ ] **Step 1:** Run the `security-review` skill over the diff. Focus: security-scoped bookmark scope creep, token handling (no secrets logged), SSH command injection in HeadlessSSHRunner (quote/escape), `blink_notify` not leaking the `.p8`.
-- [ ] **Step 2:** Fix findings; commit.
+### Task 4.2: Security review ✅
+**DONE** — 1 MEDIUM finding: HeadlessSSHRunner auto-accepted any SSH host key (MITM exposure on untrusted networks). FIXED: fail-closed host-key verification (reject unknown/changed by default via `acceptUnknownHostKeys`, consult Blink's known_hosts via `sshDirectory`). Token-in-shell-cmd (hex only), JWT/.p8 handling, bookmarks reviewed clean. App BUILD SUCCEEDED with fix.
 
 ### Task 4.3: Final milestone build + manual-test handoff
 - [ ] **Step 1:** `scripts/release.sh`; confirm green + symbol guard.

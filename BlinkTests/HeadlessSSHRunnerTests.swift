@@ -20,7 +20,8 @@ final class HeadlessSSHRunnerTests: XCTestCase {
       user: user,
       port: "22",
       command: "echo \(marker)",
-      privateKey: pem
+      privateKey: pem,
+      acceptUnknownHostKeys: true  // localhost test target not in known_hosts
     )
     XCTAssertTrue(result.stdout.contains(marker),
                   "expected stdout to contain \(marker), got: \(result.stdout)")

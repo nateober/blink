@@ -15,6 +15,7 @@
 import Foundation
 import Combine
 import SSH
+import BlinkConfig
 
 public struct HeadlessSSHResult: Sendable {
   public let stdout: String
@@ -43,7 +44,8 @@ public enum HeadlessSSHRunner {
     command: String,
     privateKey: String? = nil,
     password: String? = nil,
-    connectionTimeout: Int = 30
+    connectionTimeout: Int = 30,
+    acceptUnknownHostKeys: Bool = false
   ) async throws -> HeadlessSSHResult {
     var authMethods: [AuthMethod] = []
     if let pk = privateKey, !pk.isEmpty { authMethods.append(AuthPublicKey(privateKey: pk)) }
@@ -54,10 +56,15 @@ public enum HeadlessSSHRunner {
       user: user,
       port: port,
       authMethods: authMethods,
+      // Fail closed: hosts already in Blink's known_hosts pass without hitting this
+      // callback; unknown/changed keys are REJECTED (not blindly accepted) unless the
+      // caller explicitly opts in. Matters on untrusted networks (hotel/airport WiFi).
       verifyHostCallback: { _ in
-        Just(InteractiveResponse.affirmative).setFailureType(to: Error.self).eraseToAnyPublisher()
+        Just(acceptUnknownHostKeys ? InteractiveResponse.affirmative : InteractiveResponse.negative)
+          .setFailureType(to: Error.self).eraseToAnyPublisher()
       },
-      connectionTimeout: connectionTimeout
+      connectionTimeout: connectionTimeout,
+      sshDirectory: BlinkPaths.ssh()
     )
 
     var cancellable: AnyCancellable?
