@@ -57,3 +57,6 @@ Resources/Fonts/Pragmata*
 .swiftpm
 
 Blink.xcodeproj/project.xcworkspace/xcshareddata
+
+# Ralph loop session state
+.claude/
