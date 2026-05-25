@@ -130,12 +130,12 @@
 	<string>storing commands</string>
 	<key>NSUbiquitousContainers</key>
 	<dict>
-		<key>iCloud.sh.blink.blinkshell</key>
+		<key>iCloud.com.obercode.blink</key>
 		<dict>
 			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
 			<true/>
 			<key>NSUbiquitousContainerName</key>
-			<string>Blink</string>
+			<string>Blink For Personal</string>
 			<key>NSUbiquitousContainerSupportedFolderLevels</key>
 			<string>Any</string>
 		</dict>

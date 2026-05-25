@@ -190,17 +190,17 @@ public enum MountManager {
 ```
 - [ ] **Step 4:** Run test, confirm pass. Add files to project (as Task 1.3). Commit.
 
-### Task 1.5: pickFolder + bookmark commands (UI + dispatch)
+### Task 1.5: pickFolder + bookmark commands (UI + dispatch) ✅
+**STATUS: DONE** — `Blink/Commands/mounts.swift`: `pickFolder`/`bookmark`/`showmarks`/`jump`/`renamemark`/`deletemark` as `@_cdecl *_main` entries, backed by FleetCore. Registered in `blinkCommandsDictionary.plist`, added to Blink target, **full app BUILD SUCCEEDED** (no errors/warnings). Model: chdir into the security-scoped folder (not symlinks). `cd ~<mark>` shell-tilde syntax deferred (needs shell hook); `jump <mark>` covers navigation. Picker behavior is device-only → MANUAL-TESTS.
 **Files:** Create `Blink/Commands/pickFolder.swift` (+ register per Task 0.3 findings)
 - [ ] **Step 1: Recon (from Task 0.3):** confirmed registration call is `<RECORD HERE>`.
 - [ ] **Step 2:** Port a-Shell's pickFolder flow (GPL-3 attribution in file header): present `UIDocumentPickerViewController(forOpeningContentTypes: [.folder])`, on pick create a security-scoped bookmark, `store.add`, and mount via MountManager. Implement `bookmark`, `showmarks`, `jump`, `renamemark`, `deletemark`, and `cd ~<mark>` resolution. Each is a `*_main`-style entry registered like `config`.
 - [ ] **Step 3:** Compile check. The picker interaction itself is device-only → add acceptance steps to `MANUAL-TESTS.md`.
 - [ ] **Step 4:** Commit.
 
-### Task 1.6: Info.plist — repoint NSUbiquitousContainers
-**Files:** Modify `Blink/Info.plist`
-- [ ] **Step 1:** Change the `NSUbiquitousContainers` dict key from `iCloud.sh.blink.blinkshell` to `iCloud.com.obercode.blink` (keep `NSUbiquitousContainerIsDocumentScopePublic=true`, name "Blink For Personal", folder levels Any).
-- [ ] **Step 2:** Compile check. Commit. Add to `MANUAL-TESTS.md`: "verify Blink folder appears in iCloud Drive on a Mac."
+### Task 1.6: Info.plist — repoint NSUbiquitousContainers ✅
+**STATUS: DONE** — `Blink/Info.plist` `NSUbiquitousContainers` key changed `iCloud.sh.blink.blinkshell` → `iCloud.com.obercode.blink`, name "Blink For Personal". Verified at Phase 1 milestone archive. MANUAL-TESTS already lists the Mac-visibility check.
+- [x] Done.
 
 ### Task 1.7: PATH inclusion for mounted `/bin`
 **Files:** Modify the PATH-assembly site found in Task 0.3 (likely `MCPSession.m`)
