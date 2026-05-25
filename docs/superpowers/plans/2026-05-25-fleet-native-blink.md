@@ -20,8 +20,9 @@
 
 ## Verification commands (canonical)
 
-- Pure-logic unit tests (simulator): `xcodebuild test -project Blink.xcodeproj -scheme BlinkConfig -destination 'platform=iOS Simulator,name=iPhone 16,OS=26.5' -only-testing:BlinkConfigTests/<TestName> 2>&1 | tail -30`
-  - (Recon Task 0.2 confirms the exact scheme/destination that runs green; update this line if needed.)
+- **Pure-logic unit tests (FAST, chosen path):** `swift test --package-path tools/FleetCore 2>&1 | tail -30`
+  - Decided in Task 0.2: pure UIKit-free types live in the `FleetCore` SPM package (single source of truth), tested Mac-native in seconds. The SAME `.swift` files are added to the Blink `BlinkConfig` framework target via pbxproj refs for the app build. Tests use `@testable import FleetCore`.
+  - Simulator `xcodebuild test` of full app schemes is treated as optional bonus integration coverage, not the gate (xcframework/sim build is slow/fragile).
 - Fast compile check (one scheme): `xcodebuild build -project Blink.xcodeproj -scheme BlinkConfig -destination 'generic/platform=iOS' 2>&1 | tail -5`
 - Milestone archive: `scripts/release.sh` (auto-bumps build, archives, uploads, attaches to TestFlight group).
 - Symbol guard (after archive): `xcrun dyld_info -exports build/Blink.xcarchive/Products/Applications/Blink.app/Blink | grep -cE '_main$'` (expect ≥ 22).
@@ -38,24 +39,25 @@
 git add MANUAL-TESTS.md && git commit -m "docs: seed MANUAL-TESTS.md for on-device acceptance"
 ```
 
-### Task 0.2: Confirm the simulator unit-test path works
-**Files:** none (recon)
-- [ ] **Step 1:** List simulators: `xcrun simctl list devices available | grep -i iphone`. Pick an available iPhone on OS 26.5.
-- [ ] **Step 2:** Confirm a test scheme exists and runs: `xcodebuild test -project Blink.xcodeproj -scheme BlinkConfig -destination 'platform=iOS Simulator,name=<picked>,OS=26.5' 2>&1 | tail -40`. If `BlinkConfig` has no test target, identify which scheme maps to `BlinkConfigTests` via `xcodebuild -list`.
-- [ ] **Step 3:** Record the working scheme + destination at the top of this file (edit the "Verification commands" block). Commit the edit.
-- [ ] **Note:** If NO unit-test target runs green on the simulator after reasonable effort, append a blocker to `MANUAL-TESTS.md` and switch logic-unit verification to `swift test` in a standalone SPM package under `tools/` for the pure types (no UIKit). Do not give up silently.
+### Task 0.2: Confirm the unit-test path works ✅
+**Findings:** Sims available are iPhone 17 / 17 Pro / Air etc. on OS 26.5 (no iPhone 16).
+`xcodebuild build-for-testing -scheme BlinkFilesTests -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.5'` **succeeded** — sim builds work (xcframeworks carry sim slices). DECISION: pure logic verified via the fast `FleetCore` SPM package (`swift test`); sim `xcodebuild test` kept as optional bonus. Canonical command updated above.
+- [x] Done.
 
-### Task 0.3: Recon — command registration pattern
-**Files:** none (recon); write findings into Task 1.5 below
-- [ ] **Step 1:** Read `Blink/Commands/config.m` and find where `config` is registered (grep `replaceCommand`, `commandList`, `MCPSession`, `ios_system`). Identify the exact file + call that maps the string `"config"` → `config_main`.
-- [ ] **Step 2:** Read `MCPSession.m` (PATH setup + command table). Record: (a) how a new built-in `*_main` is registered, (b) where PATH is assembled.
-- [ ] **Step 3:** Update Task 1.5 and Task 1.7 with the real registration call + PATH file. Commit any plan edits.
+### Task 0.3: Recon — command registration pattern ✅
+**Findings:**
+- Blink commands are registered via `Resources/blinkCommandsDictionary.plist`, loaded in `Blink/AppDelegate.m:102` with `addCommandList(...)` (ios_system). NOT `commandDictionary.plist` (that's unix builtins).
+- Entry format: `"config" = ["MAIN", "config_main", "", "no"]` → `[location, functionSymbol, completionFlag(""/"c"/...), takesArgs("no"/"yes")]`. "MAIN" means dlsym(RTLD_MAIN_ONLY).
+- To add `pickFolder`: add `"pickFolder" = ["MAIN", "pickFolder_main", "", "no"]` and implement `int pickFolder_main(int,char**)` with `__attribute__((visibility("default")))` (mirrors `Blink/Commands/config.m`). release.sh's `STRIP_STYLE=non-global` + `-export_dynamic` keeps the symbol.
+- **PATH site:** still TODO — `Sessions/MCPSession.m` has setenv for LC_ALL but not the PATH line documented in upstream README. Task 1.7 must re-grep (`grep -rn 'setenv.*PATH' Sessions Blink BlinkConfig`) to find the exact site (may be in BlinkConfig env setup) before editing.
+- [x] Done.
 
 ---
 
 ## Phase 1 — Feature A: mountable iCloud/Files folders
 
-### Task 1.1: BookmarkStore — failing test
+### Task 1.1: BookmarkStore — failing test ✅
+**STATUS: DONE** — implemented in `tools/FleetCore` (per Task 0.2 decision), not BlinkConfig. Source `tools/FleetCore/Sources/FleetCore/BookmarkStore.swift`, tests `tools/FleetCore/Tests/FleetCoreTests/BookmarkStoreTests.swift`, 5 tests green via `swift test`. Task 1.3 will add this same source file to the BlinkConfig Xcode target.
 **Files:** Create `BlinkConfig/MountBookmarks/BookmarkStore.swift`; Test `BlinkConfigTests/BookmarkStoreTests.swift`
 - [ ] **Step 1: Write the failing test.**
 ```swift
@@ -107,7 +109,8 @@ final class BookmarkStoreTests: XCTestCase {
 ```
 - [ ] **Step 2: Run, confirm fail** (`BookmarkStore` undefined). Use the canonical test command.
 
-### Task 1.2: BookmarkStore — implement
+### Task 1.2: BookmarkStore — implement ✅
+**STATUS: DONE** — see Task 1.1 note. Public API: `names()`, `add(name:bookmark:)`, `rename(from:to:)`, `delete(name:)`, `resolve(name:) -> ResolvedBookmark`, `update(name:bookmark:)`; `BookmarkError`. 5 tests green.
 **Files:** `BlinkConfig/MountBookmarks/BookmarkStore.swift`
 - [ ] **Step 1: Implement.**
 ```swift
