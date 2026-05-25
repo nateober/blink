@@ -30,10 +30,10 @@
 
 ## Phase 0 — Loop harness & ground truth
 
-### Task 0.1: Create MANUAL-TESTS.md
+### Task 0.1: Create MANUAL-TESTS.md ✅
 **Files:** Create `MANUAL-TESTS.md`
-- [ ] **Step 1:** Write the file with three empty sections (Feature A / B / C), each a checklist of on-device acceptance steps copied from the spec's "Manual (device)" lines.
-- [ ] **Step 2:** Commit.
+- [x] **Step 1:** Write the file with three empty sections (Feature A / B / C), each a checklist of on-device acceptance steps copied from the spec's "Manual (device)" lines.
+- [x] **Step 2:** Commit.
 ```bash
 git add MANUAL-TESTS.md && git commit -m "docs: seed MANUAL-TESTS.md for on-device acceptance"
 ```
