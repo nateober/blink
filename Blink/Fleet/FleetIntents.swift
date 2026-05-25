@@ -58,8 +58,11 @@ struct RunFleetCommandIntent: AppIntent {
     if let keyName = h.key, let card = BKPubKey.withID(keyName) {
       pem = card.loadPrivateKey()
     }
+    // Also honor the host's stored password (keychain via passwordRef) — a host may
+    // use password auth, key auth, or both. HeadlessSSHRunner tries whatever is given.
+    let password = h.password
     let result = try await HeadlessSSHRunner.run(
-      host: hostName, user: user, command: command, privateKey: pem
+      host: hostName, user: user, command: command, privateKey: pem, password: password
     )
     return .result(value: result.stdout)
   }
