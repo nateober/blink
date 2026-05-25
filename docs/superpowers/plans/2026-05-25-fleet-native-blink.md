@@ -213,19 +213,23 @@ binary exec) and tangential to Nate's SSH/mosh habits. `MountManager.pathFragmen
 remains available if revisited. Nate can override. MANUAL-TESTS PATH item removed.
 - [x] Decided (deferred).
 
-### Task 1.8: Phase 1 milestone — archive + symbol guard
-- [ ] **Step 1:** Run `scripts/release.sh`. Confirm EXPORT SUCCEEDED.
-- [ ] **Step 2:** Symbol guard ≥ 22. If new commands added `*_main`, confirm they're present.
-- [ ] **Step 3:** Append the new build number to `MANUAL-TESTS.md` Feature A section. Commit.
+### Task 1.8: Phase 1 milestone — archive + symbol guard ✅
+**DONE** — build **1101**: archive ok, **symbol guard = 28** (22 base + 6 mount commands), uploaded, **attached to internal group, live in TestFlight**. Phase 1 (mountable iCloud folders) complete and delivered.
+
+## ⚙️ Expanded autonomous verification (per Nate, iteration 5): use computer control
+Proven available this session: `xcrun simctl boot/install/launch/io screenshot/push/openurl/privacy`, XCUITest for UI taps, and `chrome-control` MCP (open_url/execute_javascript/get_page_content) for the ASC portal. New verification gates for Phases 2-3:
+- **Phase 2:** build for `iOS Simulator,name=iPhone 17,OS=26.5`, install, run `HeadlessSSHRunner` against the Mac's own sshd (sim shares host network → `127.0.0.1`/host IP), assert captured output. Screenshot any UI.
+- **Phase 3:** `xcrun simctl push <dev> com.obercode.blink payload.json` → `simctl io screenshot` to confirm the notification + Live Activity render; unit-test payload/token logic in FleetCore.
+- **APNs key:** drive developer.apple.com via chrome-control (best-effort; 2FA may need Nate).
+- Caveat to keep stating: simulator-verified ≠ physical-device+real-APNs-verified, but it is real behavioral verification, not just "compiles."
 
 ---
 
 ## Phase 2 — Feature B: App Intents / Shortcuts
 
-### Task 2.1: Recon — SSHClient one-shot exec
-**Files:** none (recon)
-- [ ] **Step 1:** Read `SSH/SSHClient.swift`, `SSH/SSHClientConfig.swift`. Record the minimal API to: open a connection from a host config, run a single command, capture stdout/stderr/exit, close. Note how Blink resolves a host alias → config (the `ssh_config` reader).
-- [ ] **Step 2:** Write the discovered interface into Task 2.2 (replace `<API>` placeholders with real calls). Commit plan edit.
+### Task 2.1: Recon — SSHClient one-shot exec ✅ (findings)
+**Findings:** SSHClient is Combine-based. `SSHClient.dial(host, with: SSHClientConfig)` → `AnyPublisher<SSHClient,Error>`; `.connect()`, `.verifyKnownHost()`, `.auth()`; `requestExec(command:withPTY:nil...)` → `AnyPublisher<Stream,Error>` (SSH/SSHClient.swift:689). Host/key resolution is done by `SSHConfigProvider` (Blink/Commands/ssh/). The existing `ssh` command (SSHCommand.swift) already runs a remote command (`ssh <host> <cmd>`) via NonStdIO — **reusing SSHCommand with a capturing NonStdIO is more robust than reimplementing dial/auth/exec.**
+**RISK FLAG:** A headless runner cannot be verified autonomously (no device, no configured server, host-key + key-auth are normally interactive). Compile is the only autonomous gate → low confidence. Recommend implementing Phase 2/3 interactively with on-device verification. Awaiting Nate's decision (see iteration 5 checkpoint).
 
 ### Task 2.2: HeadlessSSHRunner — test + implement
 **Files:** Create `Blink/Fleet/HeadlessSSHRunner.swift`; Test `BlinkTests/HeadlessSSHRunnerTests.swift`
