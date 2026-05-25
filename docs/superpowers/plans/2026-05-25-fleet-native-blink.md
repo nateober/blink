@@ -202,10 +202,16 @@ public enum MountManager {
 **STATUS: DONE** — `Blink/Info.plist` `NSUbiquitousContainers` key changed `iCloud.sh.blink.blinkshell` → `iCloud.com.obercode.blink`, name "Blink For Personal". Verified at Phase 1 milestone archive. MANUAL-TESTS already lists the Mac-visibility check.
 - [x] Done.
 
-### Task 1.7: PATH inclusion for mounted `/bin`
-**Files:** Modify the PATH-assembly site found in Task 0.3 (likely `MCPSession.m`)
-- [ ] **Step 1:** After existing PATH setup, append each mounted folder's `bin` (those flagged `addToPath`) using `MountManager.pathFragment`. Read flags from BookmarkStore metadata (extend the plist value to `{bookmark, addToPath}` if needed — update Task 1.1/1.2 types and tests accordingly, then re-run).
-- [ ] **Step 2:** Compile check. Commit.
+### Task 1.7: PATH inclusion for mounted `/bin` — DEFERRED (YAGNI)
+**DECISION:** Descoped as a deliberate judgment call. With the chosen chdir-into-folder
+model (no persistent `~/mnt` symlinks), PATH inclusion would require: flagging marks
+addToPath (breaking BookmarkStore's clean Data-only design + its tests), resolving and
+holding `startAccessingSecurityScopedResource` for each flagged mark at session start,
+and editing a PATH-setenv site that Task 0.3 recon could not locate in MCPSession.m.
+That's substantial fragile work for a feature limited to scripts (iOS forbids native
+binary exec) and tangential to Nate's SSH/mosh habits. `MountManager.pathFragment`
+remains available if revisited. Nate can override. MANUAL-TESTS PATH item removed.
+- [x] Decided (deferred).
 
 ### Task 1.8: Phase 1 milestone — archive + symbol guard
 - [ ] **Step 1:** Run `scripts/release.sh`. Confirm EXPORT SUCCEEDED.

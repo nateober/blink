@@ -7,9 +7,9 @@ Each item names the TestFlight build it first shipped in.
 ## Feature A — Mountable iCloud/Files folders
 - [ ] `pickFolder` opens the iOS folder picker; choosing an iCloud folder mounts it at `~/mnt/<name>`.
 - [ ] Mounted folder survives an app relaunch (bookmark persisted).
-- [ ] `showmarks` / `jump <mark>` / `cd ~<mark>` / `renamemark` / `deletemark` behave.
-- [ ] A folder flagged "add to PATH" runs a script placed in `<mount>/bin` by name.
-- [ ] Blink's own iCloud folder appears in iCloud Drive on a Mac (NSUbiquitousContainers fix).
+- [ ] `showmarks` / `jump <mark>` / `renamemark` / `deletemark` behave. (`cd ~<mark>` shell-tilde deferred; use `jump`.)
+- [ ] Blink's own iCloud folder ("Blink For Personal") appears in iCloud Drive on a Mac (NSUbiquitousContainers fix).
+- (PATH-inclusion feature deferred — see plan Task 1.7.)
 
 ## Feature B — App Intents / Shortcuts
 - [ ] "Run on Ada" (or similar) Shortcut/Siri phrase appears after install.
