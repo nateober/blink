@@ -20,10 +20,14 @@ import BlinkConfig
 enum FleetIntentError: Error, CustomLocalizedStringResourceConvertible {
   case unknownHost(String)
   case noOutput
+  case runFailed(String)
   var localizedStringResource: LocalizedStringResource {
     switch self {
     case .unknownHost(let h): return "No Blink host named “\(h)”. Add it in Blink (config → Hosts) first."
     case .noOutput: return "The command produced no output."
+    // Surface the real underlying error — App Intents shows "unspecified error" for
+    // any thrown error that isn't CustomLocalizedStringResourceConvertible.
+    case .runFailed(let m): return "SSH failed: \(m)"
     }
   }
 }
@@ -61,10 +65,22 @@ struct RunFleetCommandIntent: AppIntent {
     // Also honor the host's stored password (keychain via passwordRef) — a host may
     // use password auth, key auth, or both. HeadlessSSHRunner tries whatever is given.
     let password = h.password
-    let result = try await HeadlessSSHRunner.run(
-      host: hostName, user: user, command: command, privateKey: pem, password: password
-    )
-    return .result(value: result.stdout)
+    do {
+      let result = try await HeadlessSSHRunner.run(
+        host: hostName, user: user, command: command,
+        privateKey: pem, password: password,
+        // Owner-initiated command against the owner's own fleet host: trust on first
+        // use (the host was just configured and may not be in known_hosts yet), matching
+        // normal SSH first-connect UX. The strict default remains for other callers.
+        acceptUnknownHostKeys: true
+      )
+      return .result(value: result.stdout.isEmpty ? "(no output)" : result.stdout)
+    } catch let e as FleetIntentError {
+      throw e
+    } catch {
+      // Surface the real cause instead of App Intents' generic "unspecified error".
+      throw FleetIntentError.runFailed((error as? LocalizedError)?.errorDescription ?? "\(error)")
+    }
   }
 }
 
