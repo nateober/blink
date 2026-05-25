@@ -27,5 +27,8 @@ Each item names the TestFlight build it first shipped in.
 - [ ] Live Activity renders for a long-running `claude -p` session.
 - [ ] 🔒 `blink_notify` wired into the `claude -p` wrapper on "needs input".
 
-## Build numbers
-- (recorded by the loop at each phase milestone)
+## Build numbers (TestFlight internal group)
+- 1101 — Phase 1 (mountable iCloud folders)
+- 1102 — Phase 2 (App Intents / Shortcuts)
+- 1103 — final (push notifications + security fix); all features
+- Test on the latest (1103).
