@@ -14,6 +14,10 @@ Each item names the TestFlight build it first shipped in.
 ## Feature B — App Intents / Shortcuts
 - [ ] "Run on Ada" (or similar) Shortcut/Siri phrase appears after install.
 - [ ] The Shortcut runs `claude -p "..."` on a fleet host and returns text output.
+- [ ] HeadlessSSHRunner behavioral test: fix the pre-existing BlinkTests compile errors
+      (SessionParamsTests / BKSessionParamsSnapshotting), then run
+      `BLINK_TEST_KEY_PATH=<key> xcodebuild test -only-testing:BlinkTests/HeadlessSSHRunnerTests`
+      on the iOS Simulator (sim reaches host sshd at 127.0.0.1). Compile-verified only so far.
 
 ## Feature C — Push notifications
 - [ ] 🔒 APNs auth key (.p8) generated in the portal and stored via op-add.

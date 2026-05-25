@@ -74,6 +74,7 @@
 		0D774CB0BB7C1ADAEF597FCC /* mounts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 563A4C6B82F6FED5F85338BB /* mounts.swift */; };
 		2F014B9599FEE37ED074EFB4 /* MountManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 550C417C8BDEA43D0FFEA49A /* MountManager.swift */; };
 		31ED4D83B18855E895CE085E /* BookmarkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E1C44F987CE1CC429490D9E /* BookmarkStore.swift */; };
+		449A4E16965AC74D146BE781 /* HeadlessSSHRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 298C43BC9C86A768883707AD /* HeadlessSSHRunner.swift */; };
 		803B99D72582869200DC99C8 /* BKNotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 803B99D62582869200DC99C8 /* BKNotificationsView.swift */; };
 		803B99E3258381B200DC99C8 /* SettingsHostingController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 803B99E2258381B200DC99C8 /* SettingsHostingController.swift */; };
 		85A34307200A837A009324F1 /* webfontloader.js in Resources */ = {isa = PBXBuildFile; fileRef = 85A34303200A837A009324F1 /* webfontloader.js */; };
@@ -231,6 +232,7 @@
 		C989E5561D6CC4A1003E0079 /* BKAppearanceViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = C989E5511D6CC4A1003E0079 /* BKAppearanceViewController.m */; };
 		C989E5571D6CC4A1003E0079 /* BKFontCreateViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = C989E5531D6CC4A1003E0079 /* BKFontCreateViewController.m */; };
 		C989E5581D6CC4A1003E0079 /* BKThemeCreateViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = C989E5551D6CC4A1003E0079 /* BKThemeCreateViewController.m */; };
+		C9964FBA8C4EBA96FC631DE2 /* HeadlessSSHRunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05984E19B039B7AC78703B10 /* HeadlessSSHRunnerTests.swift */; };
 		C9B2E02F1D6B612400B89F69 /* Settings.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C9B2E0041D6B612300B89F69 /* Settings.storyboard */; };
 		C9B2E0311D6B612400B89F69 /* BLKDefaults.m in Sources */ = {isa = PBXBuildFile; fileRef = C9B2E00A1D6B612300B89F69 /* BLKDefaults.m */; };
 		C9B2E0321D6B612400B89F69 /* BKFont.m in Sources */ = {isa = PBXBuildFile; fileRef = C9B2E00C1D6B612300B89F69 /* BKFont.m */; };
@@ -758,6 +760,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		05984E19B039B7AC78703B10 /* HeadlessSSHRunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HeadlessSSHRunnerTests.swift; path = BlinkTests/HeadlessSSHRunnerTests.swift; sourceTree = SOURCE_ROOT; };
 		0716B5291CFFAB9300268B5B /* AppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		0716B52A1CFFAB9300268B5B /* AppDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
 		0716B52D1CFFAB9300268B5B /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -834,6 +837,7 @@
 		07FABC1325C9AF8F00E1CC2C /* LocalFilesTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LocalFilesTests.swift; sourceTree = "<group>"; };
 		07FABC1425C9AF8F00E1CC2C /* CopyFilesTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CopyFilesTests.swift; sourceTree = "<group>"; };
 		07FABC2125C9AFC400E1CC2C /* String+Extension.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "String+Extension.swift"; sourceTree = "<group>"; };
+		298C43BC9C86A768883707AD /* HeadlessSSHRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HeadlessSSHRunner.swift; path = Blink/Fleet/HeadlessSSHRunner.swift; sourceTree = SOURCE_ROOT; };
 		550C417C8BDEA43D0FFEA49A /* MountManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MountManager.swift; path = tools/FleetCore/Sources/FleetCore/MountManager.swift; sourceTree = SOURCE_ROOT; };
 		563A4C6B82F6FED5F85338BB /* mounts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = mounts.swift; path = Blink/Commands/mounts.swift; sourceTree = SOURCE_ROOT; };
 		803B99D62582869200DC99C8 /* BKNotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BKNotificationsView.swift; sourceTree = "<group>"; };
@@ -3450,6 +3454,7 @@
 				D20CBA57236031D700D93301 /* CompleteUtilsTests.swift in Sources */,
 				D20CBA5B2360327900D93301 /* CompleteUtils.swift in Sources */,
 				D265FBC62317E54C0017EAC4 /* SessionParams.swift in Sources */,
+				C9964FBA8C4EBA96FC631DE2 /* HeadlessSSHRunnerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3675,6 +3680,7 @@
 				D241CBD023040734003D64A5 /* KBKeyViewFlexible.swift in Sources */,
 				D22278002A26204900D4C708 /* Accumulators.swift in Sources */,
 				0D774CB0BB7C1ADAEF597FCC /* mounts.swift in Sources */,
+				449A4E16965AC74D146BE781 /* HeadlessSSHRunner.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

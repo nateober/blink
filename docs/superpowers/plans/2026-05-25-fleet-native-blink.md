@@ -231,7 +231,13 @@ Proven available this session: `xcrun simctl boot/install/launch/io screenshot/p
 **Findings:** SSHClient is Combine-based. `SSHClient.dial(host, with: SSHClientConfig)` → `AnyPublisher<SSHClient,Error>`; `.connect()`, `.verifyKnownHost()`, `.auth()`; `requestExec(command:withPTY:nil...)` → `AnyPublisher<Stream,Error>` (SSH/SSHClient.swift:689). Host/key resolution is done by `SSHConfigProvider` (Blink/Commands/ssh/). The existing `ssh` command (SSHCommand.swift) already runs a remote command (`ssh <host> <cmd>`) via NonStdIO — **reusing SSHCommand with a capturing NonStdIO is more robust than reimplementing dial/auth/exec.**
 **RISK FLAG:** A headless runner cannot be verified autonomously (no device, no configured server, host-key + key-auth are normally interactive). Compile is the only autonomous gate → low confidence. Recommend implementing Phase 2/3 interactively with on-device verification. Awaiting Nate's decision (see iteration 5 checkpoint).
 
-### Task 2.2: HeadlessSSHRunner — test + implement
+### Task 2.2: HeadlessSSHRunner — test + implement ✅ (compile-verified)
+**STATUS: DONE (compile-verified); behavioral verification BLOCKED by environment.**
+`Blink/Fleet/HeadlessSSHRunner.swift`: async one-shot SSH exec on SSHClient.dial→requestExec→Stream.read, explicit key/password auth + auto-accept host. Full app **BUILD SUCCEEDED**.
+Behavioral test `BlinkTests/HeadlessSSHRunnerTests.swift` (committed, skippable via BLINK_TEST_KEY_PATH) could NOT be run autonomously:
+- Mac Catalyst: vendored xcframeworks (openssl/OpenSSH/vim/...) have **no Catalyst slices**.
+- iOS Simulator: **`BlinkTests` target is pre-existing-broken** (SessionParamsTests.swift references removed `MCPParams` members; `BKSessionParamsSnapshotting` missing) → target won't compile, blocking `-only-testing`.
+Tried embedded-key sim run (key generated, localhost-restricted, fully cleaned up after). → defer behavioral check to the milestone TestFlight build on a real device. Recorded in MANUAL-TESTS.
 **Files:** Create `Blink/Fleet/HeadlessSSHRunner.swift`; Test `BlinkTests/HeadlessSSHRunnerTests.swift`
 - [ ] **Step 1: Failing test** against localhost sshd (skips cleanly if unavailable):
 ```swift
