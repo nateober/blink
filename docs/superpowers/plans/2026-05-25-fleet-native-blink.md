@@ -343,8 +343,8 @@ def test_requires_token():
 - [ ] **Step 1:** Document: generate APNs auth key (.p8) in the portal (Keys → +, APNs), store via `op-add`, place at `~/.appstoreconnect/apns/AuthKey_<id>.p8`; wire `blink_notify.py` into the `claude -p` wrapper on "needs input". This is a 🔒 human gate → also append to `MANUAL-TESTS.md`.
 - [ ] **Step 2:** Commit.
 
-### Task 3.7: Phase 3 milestone — archive with push entitlement
-- [ ] **Step 1:** `scripts/release.sh` succeeds; confirm the signed app's entitlements include `aps-environment` (`codesign -d --entitlements - build/Blink.xcarchive/Products/Applications/Blink.app`). Symbol guard holds. Record build number. Commit.
+### Task 3.7: Phase 3 milestone — FOLDED into final archive (Task 4.3) ✅
+**DECISION:** Push delivery behaviorally verified on the sim (`simctl push` exit 0; permission-prompt screenshot proves PushRegistrar runs); `aps-environment` confirmed in the 1102 signed app. Folding the Phase-3 archive into the final 4.3 archive (after reviews) to save a ~10-min cycle.
 
 ---
 
