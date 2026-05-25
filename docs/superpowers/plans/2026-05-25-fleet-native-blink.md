@@ -161,12 +161,12 @@ public final class BookmarkStore {
 - [ ] **Step 2: Run tests, confirm pass.**
 - [ ] **Step 3: Commit.** `git add BlinkConfig/MountBookmarks BlinkConfigTests/BookmarkStoreTests.swift && git commit -m "feat(mounts): BookmarkStore for named security-scoped bookmarks"`
 
-### Task 1.3: Add BookmarkStore + test file to the Xcode project
-**Files:** Modify `Blink.xcodeproj/project.pbxproj`
-- [ ] **Step 1:** Add `BookmarkStore.swift` to the `BlinkConfig` framework target and `BookmarkStoreTests.swift` to `BlinkConfigTests`. Prefer opening the project once in Xcode if pbxproj surgery is unreliable; otherwise add the file refs + build-file entries following the pattern of an existing BlinkConfig swift file.
-- [ ] **Step 2:** Compile check (canonical fast build). Commit.
+### Task 1.3: Add BookmarkStore to the Xcode project ✅
+**STATUS: DONE** — `tools/add_to_target.py` (low-level mod-pbxproj, since high-level `add_file` crashes on this SPM-heavy project) adds a source file to a target's Sources phase. BookmarkStore.swift added to BlinkConfig; **BUILD SUCCEEDED** with it compiled in. Tests stay in FleetCore (swift test), not BlinkConfigTests. NOTE: the helper is NOT idempotent (its dup-check doesn't match) — always run on a clean pbxproj and add each file exactly once; verify counts with grep.
+- [x] Done.
 
-### Task 1.4: MountManager — define interface (recon + stub + test)
+### Task 1.4: MountManager — define interface (recon + stub + test) ✅
+**STATUS: DONE (pure helpers)** — `tools/FleetCore/Sources/FleetCore/MountManager.swift`: `mountPoint(home:name:)`, `pathFragment(home:name:)`, `sanitized(name:)`. 3 tests green; added to BlinkConfig target; BUILD SUCCEEDED. The symlink-into-`~` action (using BlinkPaths `_linkAtPath` + security-scoped access) is part of Task 1.5's app-layer shim, not this pure unit.
 **Files:** Create `BlinkConfig/MountBookmarks/MountManager.swift`; Test `BlinkConfigTests/MountManagerTests.swift`
 - [ ] **Step 1: Recon:** Read `BlinkFiles/LocalFiles.swift` (`Local` translator) and `BlinkConfig/BlinkPaths.m` (`homePath`, `iCloudDriveDocuments`, `_linkAtPath`). Record how a path under `~` is linked to a real URL.
 - [ ] **Step 2: Failing test** for the pure part — mount-point path computation and PATH-fragment generation:
