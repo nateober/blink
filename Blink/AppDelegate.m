@@ -124,7 +124,10 @@ void __setupProcessEnv(void) {
              name:UIScreenDidConnectNotification object:nil];
   
   [UNUserNotificationCenter currentNotificationCenter].delegate = self;
-  
+
+  // fleet-native: register for remote (APNs) notifications for agent-attention pushes.
+  [[PushRegistrar shared] requestAndRegister];
+
 //  [nc addObserver:self selector:@selector(_logEvent:) name:nil object:nil];
 //  [nc addObserver:self selector:@selector(_active) name:@"UIApplicationSystemNavigationActionChangedNotification" object:nil];
 
@@ -195,6 +198,15 @@ void __setupProcessEnv(void) {
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler {
   [[BKiCloudSyncHandler sharedHandler]checkForReachabilityAndSync:nil];
   // TODO: pass completion handler.
+}
+
+// fleet-native: APNs device-token callbacks → PushRegistrar.
+- (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
+  [[PushRegistrar shared] handleTokenData:deviceToken];
+}
+
+- (void)application:(UIApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
+  NSLog(@"[blink-notify] APNs registration failed: %@", error);
 }
 
 // MARK: NSUserActivity
