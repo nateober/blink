@@ -4,10 +4,10 @@
 <dict>
 	<key>aps-environment</key>
 	<string>development</string>
+	<key>com.apple.developer.aps-environment</key>
+	<string>development</string>
 	<key>com.apple.developer.associated-domains</key>
-	<array>
-		<string>webcredentials:blink.sh</string>
-	</array>
+	<array/>
 	<key>com.apple.developer.default-data-protection</key>
 	<string>NSFileProtectionComplete</string>
 	<key>com.apple.developer.icloud-container-identifiers</key>
@@ -26,11 +26,7 @@
 	<key>com.apple.developer.ubiquity-kvstore-identifier</key>
 	<string>$(TeamIdentifierPrefix)$(CFBundleIdentifier)</string>
 	<key>com.apple.developer.user-fonts</key>
-	<array>
-		<string>app-usage</string>
-	</array>
-	<key>com.apple.developer.web-browser</key>
-	<true/>
+	<array/>
 	<key>com.apple.security.app-sandbox</key>
 	<true/>
 	<key>com.apple.security.application-groups</key>
@@ -50,8 +46,6 @@
 	<key>com.apple.security.personal-information.location</key>
 	<true/>
 	<key>keychain-access-groups</key>
-	<array>
-		<string>$(AppIdentifierPrefix)$(KEYCHAIN_ID1)</string>
-	</array>
+	<array/>
 </dict>
 </plist>
