@@ -257,7 +257,8 @@ final class HeadlessSSHRunnerTests: XCTestCase {
 - [ ] **Step 2:** Implement `HeadlessSSHRunner.run(hostSpec:command:) async throws -> (stdout: String, stderr: String, exitCode: Int32)` using the real `<API>` from Task 2.1. Reuse `ssh_config` host resolution so `host: "ada"` works.
 - [ ] **Step 3:** Run test (skips without env var; run once with `BLINK_SSH_TEST_HOST=nateober@127.0.0.1` if a local sshd is reachable). Commit.
 
-### Task 2.3: RunFleetCommandIntent + AppShortcutsProvider
+### Task 2.3: RunFleetCommandIntent + AppShortcutsProvider ✅
+**STATUS: DONE** — `Blink/Fleet/FleetIntents.swift`: `RunFleetCommandIntent(host, command)` auto-resolves user/hostName/key via `BKHosts.withHost` + `BKPubKey.loadPrivateKey`, runs `HeadlessSSHRunner`, returns stdout. `BlinkFleetShortcuts` AppShortcutsProvider exposes "Run \(command) on \(host)". In-app App Intent (no new target). BUILD SUCCEEDED. Shortcut invocation is device-only → MANUAL-TESTS.
 **Files:** Create `Blink/Fleet/FleetIntents.swift`
 - [ ] **Step 1:** Implement `RunFleetCommandIntent: AppIntent` with `@Parameter host: String`, `@Parameter command: String`, `perform()` → `HeadlessSSHRunner.run`, returns `.result(value: stdout)`. Implement `BlinkShortcuts: AppShortcutsProvider` with phrases ("Run \\(\\.$command) on \\(\\.$host) with Blink").
 - [ ] **Step 2:** Add files to the `Blink` app target (pbxproj). Compile check. App Intents must be in the main app target (no new extension).

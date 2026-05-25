@@ -80,6 +80,7 @@
 		85A34307200A837A009324F1 /* webfontloader.js in Resources */ = {isa = PBXBuildFile; fileRef = 85A34303200A837A009324F1 /* webfontloader.js */; };
 		85A34309200A8FAF009324F1 /* term.css in Resources */ = {isa = PBXBuildFile; fileRef = 85A34308200A8FAF009324F1 /* term.css */; };
 		9827126B262E4BDB00F883FA /* BlinkFileProviderExtension.appex in Embed PlugIns */ = {isa = PBXBuildFile; fileRef = 98271250262E4BDB00F883FA /* BlinkFileProviderExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A12D430E83AF3E532A02D536 /* FleetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCD14596A11D1B5F0CC59170 /* FleetIntents.swift */; };
 		B700AED81DD0F2C200100EBF /* CloudKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B700AED71DD0F2C200100EBF /* CloudKit.framework */; };
 		B75112CD1DE4A7B10040C693 /* BKiCloudConfigurationViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = B75112CC1DE4A7B10040C693 /* BKiCloudConfigurationViewController.m */; };
 		B752EE2B1DFEF19D00E305C8 /* BKUserConfigurationManager.m in Sources */ = {isa = PBXBuildFile; fileRef = B752EE2A1DFEF19D00E305C8 /* BKUserConfigurationManager.m */; };
@@ -1005,6 +1006,7 @@
 		C9B2E0101D6B612300B89F69 /* BKTheme.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BKTheme.m; sourceTree = "<group>"; };
 		C9B2E0121D6B612300B89F69 /* BKSettingsFileDownloader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BKSettingsFileDownloader.h; sourceTree = "<group>"; };
 		C9B2E0131D6B612300B89F69 /* BKSettingsFileDownloader.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BKSettingsFileDownloader.m; sourceTree = "<group>"; };
+		CCD14596A11D1B5F0CC59170 /* FleetIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FleetIntents.swift; path = Blink/Fleet/FleetIntents.swift; sourceTree = SOURCE_ROOT; };
 		D2011CD626A6FF9F002E4E85 /* Alert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Alert.swift; sourceTree = "<group>"; };
 		D2036B6223967F2F0013D2A3 /* BindingConfigView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BindingConfigView.swift; sourceTree = "<group>"; };
 		D20394A929E6B30400FB337F /* Receipt.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Receipt.swift; sourceTree = "<group>"; };
@@ -3681,6 +3683,7 @@
 				D22278002A26204900D4C708 /* Accumulators.swift in Sources */,
 				0D774CB0BB7C1ADAEF597FCC /* mounts.swift in Sources */,
 				449A4E16965AC74D146BE781 /* HeadlessSSHRunner.swift in Sources */,
+				A12D430E83AF3E532A02D536 /* FleetIntents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
