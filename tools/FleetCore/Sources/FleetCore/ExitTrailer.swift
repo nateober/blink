@@ -22,21 +22,24 @@ public enum ExitTrailer {
 
   /// Split the trailing `__BLINK_EXIT_<n>__` line off captured stdout.
   /// Returns the cleaned output and the parsed code (nil if no valid trailer present).
+  ///
+  /// Scans from the END for the LAST marker line, so it is robust to: output that itself
+  /// contains a marker-looking line (the real trailer is last), CRLF / trailing whitespace
+  /// on the marker line, and trailing blank lines after it. A wrong answer here would hand
+  /// a bogus/zero exit code to the App Intent and mask a remote failure as success.
   public static func parse(_ raw: String) -> Result {
-    let lines = raw.split(separator: "\n", omittingEmptySubsequences: false)
-    guard let last = lines.last(where: { !$0.isEmpty }),
-          last.hasPrefix(prefix), last.hasSuffix(suffix) else {
-      return Result(output: raw, exitCode: nil)
+    // components(separatedBy:.newlines) normalizes \n / \r\n / \r so a CRLF transport
+    // doesn't leave a stray \r on the marker line.
+    let lines = raw.components(separatedBy: .newlines)
+    var i = lines.count - 1
+    while i >= 0 {
+      let line = lines[i].trimmingCharacters(in: .whitespaces)
+      if line.hasPrefix(prefix), line.hasSuffix(suffix),
+         let code = Int32(line.dropFirst(prefix.count).dropLast(suffix.count)) {
+        return Result(output: lines[0..<i].joined(separator: "\n"), exitCode: code)
+      }
+      i -= 1
     }
-    let inner = last.dropFirst(prefix.count).dropLast(suffix.count)
-    guard let code = Int32(inner) else { return Result(output: raw, exitCode: nil) }
-    // Drop the marker line plus exactly one separator newline before it.
-    if let range = raw.range(of: "\n" + last) {
-      return Result(output: String(raw[raw.startIndex..<range.lowerBound]), exitCode: code)
-    }
-    if let range = raw.range(of: String(last)) {
-      return Result(output: String(raw[raw.startIndex..<range.lowerBound]), exitCode: code)
-    }
-    return Result(output: raw, exitCode: code)
+    return Result(output: raw, exitCode: nil)
   }
 }
