@@ -29,6 +29,11 @@ This splits the fix cleanly into an **app layer** (in our control, small, testab
 
 ## App layer — honor the host's proxy + fail legibly
 
+> **Superseded (see "Network layer" below):** the recon found the fleet — including the iPhone — is
+> already on a Tailscale/Headscale mesh, so this whole app-layer plumbing is YAGNI and **not being
+> built**. Kept here only to record the option that was evaluated. The 1106 legible-error change
+> already shipped and stands.
+
 1. **Plumb proxy through `HeadlessSSHRunner.run`.** Add `proxyJump: String? = nil` (and
    `proxyCommand: String? = nil` for completeness) parameters, pass them into `SSHClientConfig`.
    ProxyJump is the supported headless mechanism (libssh native); ProxyCommand on iOS uses Blink's
@@ -45,35 +50,47 @@ That's the entirety of what code can do. It makes "configure `ada` with `ProxyJu
 and the Shortcut works from anywhere" true — *provided the bastion can reach the LAN host*, which is
 the network layer.
 
-## Network layer — the actual path (Nate's decision)
+## Network layer — already solved (Tailscale/Headscale)
 
-Three ways to make a LAN host reachable from the phone off-LAN. App-layer change above is a no-op
-without one of these.
+**Recon update (2026-05-29):** the entire fleet is already on a self-hosted Headscale tailnet
+(MagicDNS suffix `ober`, Headscale's default `100.64.0.0/10` CGNAT range), **and the iPhone is a
+member and online.** `tailscale status` on Ada:
 
-| Option | How | Pros | Cons |
-|---|---|---|---|
-| **A. Always-on WireGuard on iPhone** (recommended) | Phone joins the WG net (10.6.0.x); Blink hosts use WG IPs (`ada = 10.6.0.6`). No proxy needed. | Cleanest; all hosts reachable + encrypted; reuses existing WG; no app change strictly required (just use WG IPs as hostNames). | WG client must be up (battery, captive portals); the fleet WG must actually peer the phone and route to each host — the `[[machine-identity]]` memory notes the tunnel is "up but unpeered." Infra gap to close + verify. |
-| **B. ProxyJump through public Lightsail** | Set `ProxyJump lightsail` on each fleet host; Lightsail is public (`ssh lightsail` works). Uses the app-layer change above. | No phone-side VPN; works on locked-down cellular; per-host opt-in. | Lightsail must itself reach the home LAN host → Lightsail must join the WG mesh or hold a reverse tunnel from home. So B still needs a mesh; it just moves the always-on endpoint from the phone to Lightsail. Extra hop/latency. |
-| **C. Tailscale (or similar) mesh** | Install Tailscale on the fleet + phone; use MagicDNS names. | NAT-traversal "just works"; no manual peering; reachable anywhere. | New dependency/daemon across the fleet; duplicates the existing WG investment. |
+| Host | Tailscale IP | MagicDNS |
+|---|---|---|
+| jarvis | `100.64.0.1` | `jarvis.ober` |
+| lightsail | `100.64.0.2` | `lightsail.ober` |
+| **ada** | `100.64.0.3` | `ada.ober` |
+| homeassistant | `100.64.0.4` | `homeassistant.ober` |
+| pihole | `100.64.0.5` | `pihole.ober` |
+| **iphone** | `100.64.0.6` | `iphone.ober` (online) |
+| max | `100.64.0.7` / `100.64.0.8` | `max.ober` |
 
-**Recommendation:** **A**, with **B as the resilient add-on**. Put the iPhone on the WG mesh and
-point Blink hosts at WG IPs — that alone fixes the Shortcut with no app change. Then layer the
-app-layer proxy plumbing so that hosts *also* carrying `ProxyJump lightsail` keep working if WG is
-down or blocked (Lightsail joins the mesh as the bastion). A is the primary path; B is the fallback;
-the app-layer change is what makes B possible and is worth doing regardless.
+This collapses the decision. The phone can already reach every fleet host from anywhere (cellular
+included) over Tailscale's NAT-traversal + DERP relays — no WireGuard peering, no Lightsail bastion,
+**and no app code change.** The earlier WireGuard / ProxyJump options are moot. The "app layer"
+section above (ProxyJump plumbing, reachability hint) is therefore **YAGNI and dropped** — Tailscale
+removes the need for it. (Keep the 1106 legible-error change; that stands on its own.)
 
-## Phased plan (app layer is implementable + testable here; network is infra)
+**The entire fix is one configuration step:** set each Blink host's `hostName` to its Tailscale
+address. Prefer the **literal `100.64.0.x` IP** over the MagicDNS name — the IP always routes through
+the Tailscale `utun` regardless of whether iOS is using Tailscale's DNS resolver, whereas `ada.ober`
+resolution depends on "Use Tailscale DNS / MagicDNS" being on. (If MagicDNS is on, names work too and
+read better.)
 
-- **Phase 1 (code, here):** plumb `proxyJump` through `HeadlessSSHRunner` + both callers;
-  add `Reachability.isPrivateHost` + hint string (TDD in FleetCore); build + sim-validate; ship in
-  the next TestFlight build.
-- **Phase 2 (infra, Nate):** verify/repair the WG mesh — peer the iPhone, confirm it routes to
-  10.6.0.x LAN hosts (`sudo wg show` on Ada; the memory flags it unpeered). Set Blink host
-  `hostName` to WG IPs (or add WG-IP host variants). This is the change that actually fixes cellular.
-- **Phase 3 (infra, optional):** add Lightsail to the WG mesh as a public bastion; set
-  `ProxyJump lightsail` on fleet hosts as the WG-down fallback. Validated by Phase 1's plumbing.
+## Action (Nate, ~5 min, no build)
+
+In Blink → Settings → Hosts, set `HostName` for the fleet aliases to their Tailscale IPs:
+
+- `ada` → `100.64.0.3`
+- `jarvis` → `100.64.0.1`
+- `max` → `100.64.0.7` (or `100.64.0.8` if that is the active mini)
+- `lightsail` → `100.64.0.2`
+
+Leave user/key/password as-is. Then the Shortcut and `ssh <alias>` work on cellular. Verify by
+toggling the phone to cellular (WiFi off) and running the "Run Fleet Command" Shortcut against `ada`
+with e.g. `uptime` — 1106 will report a clear error if anything is still wrong.
 
 ## Out of scope
-ProxyCommand over the headless path (Blink's iOS stdio-tunnel reimplementation — interactive only);
-any new host-config UI (reuse the existing ProxyJump field); changing the interactive `ssh` path
-(already supports proxy).
+WireGuard peering and the Lightsail-bastion path (obsoleted by Tailscale); ProxyJump plumbing in the
+headless runner (YAGNI given Tailscale); any new host-config UI.
