@@ -135,6 +135,13 @@
 		<string></string>
 		<string>no</string>
 	</array>
+	<key>notiflog</key>
+	<array>
+		<string>MAIN</string>
+		<string>notiflog_main</string>
+		<string></string>
+		<string>no</string>
+	</array>
 	<key>pickFolder</key>
 	<array>
 		<string>MAIN</string>
