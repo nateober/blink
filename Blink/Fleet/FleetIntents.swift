@@ -53,26 +53,16 @@ struct RunFleetCommandIntent: AppIntent {
 
   @MainActor
   func perform() async throws -> some IntentResult & ReturnsValue<String> {
-    guard let h = BKHosts.withHost(host) else {
+    // Friendly error if the alias isn't a saved host (HeadlessSSHRunner also resolves via
+    // ssh_config, but BKHosts is where the Shortcut's hosts live).
+    guard BKHosts.withHost(host) != nil else {
       throw FleetIntentError.unknownHost(host)
     }
-    let user = (h.user?.isEmpty == false) ? h.user! : NSUserName()
-    let hostName = (h.hostName?.isEmpty == false) ? h.hostName! : host
-    var pem: String? = nil
-    if let keyName = h.key, let card = BKPubKey.withID(keyName) {
-      pem = card.loadPrivateKey()
-    }
-    // Also honor the host's stored password (keychain via passwordRef) — a host may
-    // use password auth, key auth, or both. HeadlessSSHRunner tries whatever is given.
-    let password = h.password
     do {
+      // Resolve + authenticate exactly like `ssh <alias>` in the terminal (agent + default
+      // keys + keyboard-interactive), trusting the host key on first use for the owner's fleet.
       let result = try await HeadlessSSHRunner.run(
-        host: hostName, user: user, command: command,
-        privateKey: pem, password: password,
-        // Owner-initiated command against the owner's own fleet host: trust on first
-        // use (the host was just configured and may not be in known_hosts yet), matching
-        // normal SSH first-connect UX. The strict default remains for other callers.
-        acceptUnknownHostKeys: true
+        alias: host, command: command, acceptUnknownHostKeys: true
       )
       // A non-zero remote exit is a real failure — surface it (with stderr) instead of
       // handing Shortcuts a false success with empty/partial stdout.

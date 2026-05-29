@@ -36,24 +36,9 @@ public func fleetexec_main(argc: Int32, argv: Argv) -> Int32 {
 
   Task {
     defer { sema.signal() }
-    // Resolve host config the same way RunFleetCommandIntent does.
-    guard let h = await MainActor.run(body: { BKHosts.withHost(host) }) else {
-      failure = "No Blink host named '\(host)'. Add it in Blink (config → Hosts) first."
-      return
-    }
-    let user = (h.user?.isEmpty == false) ? h.user! : NSUserName()
-    let hostName = (h.hostName?.isEmpty == false) ? h.hostName! : host
-    var pem: String? = nil
-    if let keyName = h.key, let card = await MainActor.run(body: { BKPubKey.withID(keyName) }) {
-      pem = card.loadPrivateKey()
-    }
-    let password = h.password
     do {
-      let r = try await HeadlessSSHRunner.run(
-        host: hostName, user: user, command: command,
-        privateKey: pem, password: password,
-        acceptUnknownHostKeys: true
-      )
+      // Same resolution + auth as the App Intent and the interactive `ssh <alias>`.
+      let r = try await HeadlessSSHRunner.run(alias: host, command: command, acceptUnknownHostKeys: true)
       outText = r.stdout
       errText = r.stderr
       exit = r.exitCode ?? 0

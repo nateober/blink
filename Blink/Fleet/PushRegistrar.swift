@@ -51,25 +51,14 @@ import BlinkConfig
   /// "push-notify" preferred, else "ada"). No-op if neither is configured.
   private func publishBestEffort(hex: String) {
     let candidates = ["push-notify", "ada"]
-    guard let alias = candidates.first(where: { BKHosts.withHost($0) != nil }),
-          let h = BKHosts.withHost(alias) else { return }
-    let user = (h.user?.isEmpty == false) ? h.user! : NSUserName()
-    let hostName = (h.hostName?.isEmpty == false) ? h.hostName! : alias
-    var pem: String? = nil
-    if let keyName = h.key, let card = BKPubKey.withID(keyName) { pem = card.loadPrivateKey() }
-    let pw = h.password
+    guard let alias = candidates.first(where: { BKHosts.withHost($0) != nil }) else { return }
     let cmd = "mkdir -p ~/.blink-notify && printf '%s' '\(hex)' > ~/.blink-notify/token"
     Task {
       do {
-        _ = try await HeadlessSSHRunner.run(
-          host: hostName, user: user, command: cmd,
-          privateKey: pem, password: pw,
-          // Owner publishing to their own fleet host: honor a stored password (key-less
-          // hosts authenticate this way) and trust on first use, mirroring the App Intent
-          // path. The fork's known_hosts may not yet contain this host.
-          acceptUnknownHostKeys: true
-        )
-        NSLog("[blink-notify] published APNs token to %@@%@", user, hostName)
+        // Resolve + authenticate like `ssh <alias>` (agent + default keys + keyboard-interactive),
+        // trusting the host key on first use for the owner's own fleet.
+        _ = try await HeadlessSSHRunner.run(alias: alias, command: cmd, acceptUnknownHostKeys: true)
+        NSLog("[blink-notify] published APNs token via '%@'", alias)
       } catch {
         NSLog("[blink-notify] token publish to '%@' failed: %@", alias, error.localizedDescription)
       }

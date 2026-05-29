@@ -35,47 +35,69 @@ public enum HeadlessSSHError: Error, LocalizedError {
   }
 }
 
-public enum HeadlessSSHRunner {
-  /// Run `command` on `user@host:port` over SSH and return captured stdout.
-  /// - Auth: `privateKey` (PEM string) and/or `password`. At least one required.
-  /// - Host-key verification is auto-accepted (personal fleet).
-  public static func run(
-    host: String,
-    user: String,
-    port: String = "22",
-    command: String,
-    privateKey: String? = nil,
-    password: String? = nil,
-    connectionTimeout: Int = 30,
-    overallTimeout: TimeInterval = 30,
-    acceptUnknownHostKeys: Bool = false
-  ) async throws -> HeadlessSSHResult {
-    var authMethods: [AuthMethod] = []
-    if let pk = privateKey, !pk.isEmpty { authMethods.append(AuthPublicKey(privateKey: pk)) }
-    if let pw = password, !pw.isEmpty { authMethods.append(AuthPassword(with: pw)) }
-    guard !authMethods.isEmpty else { throw HeadlessSSHError.noAuth }
+/// SSHError is not a LocalizedError, so its `localizedDescription` is the useless
+/// "operation couldn't be completed (SSH.SSHError error N.)". Reach for its real
+/// `.description` ("Could not authenticate. Tried …", "Connection Error: …") instead.
+private func describeSSH(_ error: Error) -> String {
+  if let e = error as? SSHError { return e.description }
+  if let e = error as? LocalizedError, let d = e.errorDescription { return d }
+  return "\(error)"
+}
 
-    let config = SSHClientConfig(
-      user: user,
-      port: port,
-      authMethods: authMethods,
-      // Fail closed: hosts already in Blink's known_hosts pass without hitting this
-      // callback; unknown/changed keys are REJECTED (not blindly accepted) unless the
-      // caller explicitly opts in. Matters on untrusted networks (hotel/airport WiFi).
-      verifyHostCallback: { _ in
-        Just(acceptUnknownHostKeys ? InteractiveResponse.affirmative : InteractiveResponse.negative)
-          .setFailureType(to: Error.self).eraseToAnyPublisher()
-      },
-      connectionTimeout: connectionTimeout,
-      sshDirectory: BlinkPaths.ssh()
-    )
+public enum HeadlessSSHRunner {
+  /// Run `command` on the saved Blink host `alias` over SSH and return captured output.
+  ///
+  /// Resolves and authenticates the SAME way the interactive `ssh <alias>` command does —
+  /// via `BKConfig` + an `SSHAgent` loaded with the host's signers (or the DEFAULT signers
+  /// when the host binds no explicit key), plus keyboard-interactive answered with the host's
+  /// stored password. Hand-rolling `AuthPublicKey(hostKey)+AuthPassword` (the old approach) is
+  /// why the App Intent failed with `authFailed` where the terminal worked: Blink moved to a
+  /// pure-agent model (see SSHConfigProvider), and most hosts authenticate via a default key
+  /// or keyboard-interactive, neither of which the narrow path tried.
+  public static func run(
+    alias: String,
+    command: String,
+    overallTimeout: TimeInterval = 30,
+    acceptUnknownHostKeys: Bool = true
+  ) async throws -> HeadlessSSHResult {
+    let bkConfig = try BKConfig()
+    let host = try bkConfig.bkSSHHost(alias)
+    let hostName = host.hostName ?? alias
+
+    // Build the agent exactly like SSHConfigProvider.agent(for:): host signers, else defaults.
+    let logger = PassthroughSubject<String, Never>()
+    let agent = SSHAgent()
+    let consts: [SSHAgentConstraint] = [SSHConstraintTrustedConnectionOnly()]
+    let signers = bkConfig.signer(forHost: host) ?? bkConfig.defaultSigners()
+    signers.forEach { (signer, name) in agent.loadKey(signer, aka: name, constraints: consts) }
+    if let defaultAgent = SSHDefaultAgent.instance { agent.linkTo(agent: defaultAgent) }
+
+    // Headless: answer any keyboard/password-interactive prompt with the stored host password
+    // (the terminal would read it from the TTY; there is none here).
+    let pw = host.password
+    let answer: AuthKeyboardInteractive.RequestAnswersCb = { prompt in
+      Just(prompt.userPrompts.map { _ in pw ?? "" })
+        .setFailureType(to: Error.self).eraseToAnyPublisher()
+    }
+    var authMethods: [AuthMethod] = [AuthAgent(agent)]
+    if let pw = pw, !pw.isEmpty { authMethods.append(AuthPassword(with: pw)) }
+    authMethods.append(AuthKeyboardInteractive(requestAnswers: answer, wrongRetriesAllowed: 1))
+
+    // Owner running against their own fleet: trust on first use (host may not be in known_hosts).
+    let verify: SSHClientConfig.RequestVerifyHostCallback? = { _ in
+      Just(acceptUnknownHostKeys ? InteractiveResponse.affirmative : InteractiveResponse.negative)
+        .setFailureType(to: Error.self).eraseToAnyPublisher()
+    }
+
+    let config = host.sshClientConfig(
+      authMethods: authMethods, verifyHostCallback: verify, agent: agent, logger: logger)
 
     // Wrap so the remote shell emits its $? as a trailing sentinel line we can parse —
     // the SSH framework does not expose the channel exit status (see ExitTrailer).
     let wrapped = ExitTrailer.wrap(command)
 
     return try await runOnce(
-      host: host, config: config, wrappedCommand: wrapped, overallTimeout: overallTimeout)
+      host: hostName, config: config, wrappedCommand: wrapped, overallTimeout: overallTimeout)
   }
 
   private static func runOnce(
@@ -121,7 +143,7 @@ public enum HeadlessSSHRunner {
             receiveCompletion: { completion in
               switch completion {
               case .failure(let error):
-                finish { cont.resume(throwing: HeadlessSSHError.ssh(error.localizedDescription)) }
+                finish { cont.resume(throwing: HeadlessSSHError.ssh(describeSSH(error))) }
               case .finished:
                 let parsed = ExitTrailer.parse(String(decoding: outData, as: UTF8.self))
                 let err = String(decoding: errData, as: UTF8.self)
