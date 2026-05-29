@@ -57,9 +57,22 @@ import BlinkConfig
     let hostName = (h.hostName?.isEmpty == false) ? h.hostName! : alias
     var pem: String? = nil
     if let keyName = h.key, let card = BKPubKey.withID(keyName) { pem = card.loadPrivateKey() }
+    let pw = h.password
     let cmd = "mkdir -p ~/.blink-notify && printf '%s' '\(hex)' > ~/.blink-notify/token"
     Task {
-      _ = try? await HeadlessSSHRunner.run(host: hostName, user: user, command: cmd, privateKey: pem)
+      do {
+        _ = try await HeadlessSSHRunner.run(
+          host: hostName, user: user, command: cmd,
+          privateKey: pem, password: pw,
+          // Owner publishing to their own fleet host: honor a stored password (key-less
+          // hosts authenticate this way) and trust on first use, mirroring the App Intent
+          // path. The fork's known_hosts may not yet contain this host.
+          acceptUnknownHostKeys: true
+        )
+        NSLog("[blink-notify] published APNs token to %@@%@", user, hostName)
+      } catch {
+        NSLog("[blink-notify] token publish to '%@' failed: %@", alias, error.localizedDescription)
+      }
     }
   }
 }
