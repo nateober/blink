@@ -74,64 +74,83 @@ public enum HeadlessSSHRunner {
     // the SSH framework does not expose the channel exit status (see ExitTrailer).
     let wrapped = ExitTrailer.wrap(command)
 
-    // Race the SSH work against an overall deadline so a hung command (e.g. one that
-    // blocks on stdin) fails cleanly instead of wedging the App Intent until iOS kills it.
-    return try await withThrowingTaskGroup(of: HeadlessSSHResult.self) { group in
-      group.addTask {
-        try await runOnce(host: host, config: config, wrappedCommand: wrapped)
-      }
-      group.addTask {
-        try await Task.sleep(nanoseconds: UInt64(overallTimeout * 1_000_000_000))
-        throw HeadlessSSHError.ssh("timed out after \(Int(overallTimeout))s")
-      }
-      defer { group.cancelAll() }
-      guard let first = try await group.next() else {
-        throw HeadlessSSHError.ssh("no result")
-      }
-      return first
-    }
+    return try await runOnce(
+      host: host, config: config, wrappedCommand: wrapped, overallTimeout: overallTimeout)
   }
 
   private static func runOnce(
     host: String,
     config: SSHClientConfig,
-    wrappedCommand: String
+    wrappedCommand: String,
+    overallTimeout: TimeInterval
   ) async throws -> HeadlessSSHResult {
-    var cancellable: AnyCancellable?
-    var outData = Data()
-    var errData = Data()
-    var resumed = false
-
+    // CRITICAL: Blink's SSH framework schedules all I/O on the RunLoop captured at
+    // SSHClient.init (`self.rloop = RunLoop.current`, via `.subscribe(on: rloop)`), and
+    // only makes progress while that run loop is *running*. The interactive `ssh` command
+    // works because it spins its thread's run loop (ssh.swift `awaitRunLoop` → CFRunLoopRun).
+    // Run on the Swift-concurrency pool — which never spins a run loop — and the connection
+    // simply hangs (App Intent then dies with a generic "unknown error"). So we dial on a
+    // dedicated Thread and drive its run loop until the pipeline completes, mirroring the
+    // interactive path. The deadline timer doubles as the keep-alive source and the timeout.
     return try await withCheckedThrowingContinuation { (cont: CheckedContinuation<HeadlessSSHResult, Error>) in
-      cancellable = SSHClient.dial(host, with: config)
-        .flatMap { client in client.requestExec(command: wrappedCommand) }
-        .flatMap { (stream: SSH.Stream) in
-          // Read stdout and stderr to EOF; the channel completes when both drain.
-          Publishers.Zip(
-            stream.read(max: Int(SSIZE_MAX)),
-            stream.read_err(max: Int(SSIZE_MAX))
-          )
+      let thread = Thread {
+        var cancellable: AnyCancellable?
+        var outData = Data()
+        var errData = Data()
+        var finished = false
+        let cf = CFRunLoopGetCurrent()
+
+        func finish(_ resume: () -> Void) {
+          if finished { return }
+          finished = true
+          resume()
+          cancellable?.cancel()
+          CFRunLoopStop(cf)
         }
-        .sink(
-          receiveCompletion: { completion in
-            guard !resumed else { return }
-            resumed = true
-            switch completion {
-            case .failure(let error):
-              cont.resume(throwing: HeadlessSSHError.ssh(error.localizedDescription))
-            case .finished:
-              let parsed = ExitTrailer.parse(String(decoding: outData, as: UTF8.self))
-              let err = String(decoding: errData, as: UTF8.self)
-              cont.resume(returning: HeadlessSSHResult(
-                stdout: parsed.output, stderr: err, exitCode: parsed.exitCode))
-            }
-            _ = cancellable  // retain until completion
-          },
-          receiveValue: { (out: DispatchData, err: DispatchData) in
-            outData.append(contentsOf: out)
-            errData.append(contentsOf: err)
+
+        cancellable = SSHClient.dial(host, with: config)
+          .flatMap { client in client.requestExec(command: wrappedCommand) }
+          .flatMap { (stream: SSH.Stream) in
+            // Read stdout and stderr to EOF; the channel completes when both drain.
+            Publishers.Zip(
+              stream.read(max: Int(SSIZE_MAX)),
+              stream.read_err(max: Int(SSIZE_MAX))
+            )
           }
-        )
+          .sink(
+            receiveCompletion: { completion in
+              switch completion {
+              case .failure(let error):
+                finish { cont.resume(throwing: HeadlessSSHError.ssh(error.localizedDescription)) }
+              case .finished:
+                let parsed = ExitTrailer.parse(String(decoding: outData, as: UTF8.self))
+                let err = String(decoding: errData, as: UTF8.self)
+                finish {
+                  cont.resume(returning: HeadlessSSHResult(
+                    stdout: parsed.output, stderr: err, exitCode: parsed.exitCode))
+                }
+              }
+            },
+            receiveValue: { (out: DispatchData, err: DispatchData) in
+              outData.append(contentsOf: out)
+              errData.append(contentsOf: err)
+            }
+          )
+
+        // If dial failed synchronously, the continuation already resumed — don't run the loop.
+        if !finished {
+          let deadline = Timer(timeInterval: overallTimeout, repeats: false) { _ in
+            finish { cont.resume(throwing: HeadlessSSHError.ssh("timed out after \(Int(overallTimeout))s")) }
+          }
+          RunLoop.current.add(deadline, forMode: .default)
+          CFRunLoopRun()
+          deadline.invalidate()
+        }
+        cancellable?.cancel()
+      }
+      thread.name = "blink.fleet.ssh"
+      thread.stackSize = 2 << 20
+      thread.start()
     }
   }
 }
