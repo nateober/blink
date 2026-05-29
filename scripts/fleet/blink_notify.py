@@ -12,7 +12,7 @@ delivers it to APNs over HTTP/2 using a provider .p8 auth key.
 
 --dry-run prints the payload JSON and exits (no deps needed) — used by tests.
 """
-import argparse, json, sys, time
+import argparse, json, re, sys, time
 
 APNS_HOST = "https://api.push.apple.com"  # production; use api.sandbox.push.apple.com for dev builds
 
@@ -22,7 +22,10 @@ def build_payload(args):
     if args.session: blink["session"] = args.session
     alert = {"title": args.title}
     if args.body: alert["body"] = args.body
-    return {"aps": {"alert": alert, "sound": "default"}, "blink": blink}
+    # content-available wakes a backgrounded/suspended app so it can record the push to its
+    # inbox even before the user taps the banner (didReceiveRemoteNotification). A force-quit
+    # app still won't wake — iOS doesn't deliver background pushes to terminated apps.
+    return {"aps": {"alert": alert, "sound": "default", "content-available": 1}, "blink": blink}
 
 def send(args, payload):
     # Lazy imports so --dry-run needs no third-party deps.
@@ -66,6 +69,8 @@ def main():
     if args.dry_run:
         print(json.dumps(payload))
         return 0
+    if not re.fullmatch(r"[0-9a-fA-F]{4,}", args.token):
+        ap.error("--token must be a hex APNs device token")
     missing = [n for n in ("key_id", "team_id", "p8") if not getattr(args, n)]
     if missing:
         ap.error("send requires --key-id, --team-id, --p8 (or use --dry-run): missing " + ",".join(missing))

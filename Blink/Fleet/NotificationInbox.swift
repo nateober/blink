@@ -30,11 +30,13 @@ import BlinkConfig
     let blink = userInfo["blink"] as? [String: Any]
     let title = title ?? ""
     let body = body ?? ""
-    // Foreground arrival (willPresent) and a subsequent tap (didReceiveResponse) can both
-    // fire for the same push — collapse the immediate duplicate.
+    let host = blink?["host"] as? String
+    // The same push can surface via more than one callback (foreground willPresent, a tap,
+    // and a content-available background wake). Collapse the immediate duplicate — keyed on
+    // host too, so two different hosts with identical text aren't merged.
     if let last = log.recent(limit: 1).first,
-       last.title == title, last.body == body,
-       Date().timeIntervalSince(last.receivedAt) < 5 {
+       last.title == title, last.body == body, last.host == host,
+       Date().timeIntervalSince(last.receivedAt) < 10 {
       return
     }
     log.append(NotificationRecord(
@@ -42,9 +44,17 @@ import BlinkConfig
       title: title,
       body: body,
       kind: blink?["kind"] as? String,
-      host: blink?["host"] as? String,
+      host: host,
       session: blink?["session"] as? String
     ))
+  }
+
+  /// Background/content-available path: the raw APNs userInfo has the alert nested under
+  /// `aps.alert`. Dig it out, then record (deduped) like the foreground path.
+  @objc public func recordRemote(userInfo: [AnyHashable: Any]) {
+    let aps = userInfo["aps"] as? [String: Any]
+    let alert = aps?["alert"] as? [String: Any]
+    record(title: alert?["title"] as? String, body: alert?["body"] as? String, userInfo: userInfo)
   }
 
   func recent(limit: Int = 50) -> [NotificationRecord] { log.recent(limit: limit) }

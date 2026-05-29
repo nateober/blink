@@ -44,10 +44,10 @@ public final class NotificationLog {
     persist()
   }
 
-  /// Most recent first, capped at `limit`.
+  /// Most recent first (by `receivedAt`, not insertion order), capped at `limit`.
   public func recent(limit: Int = 50) -> [NotificationRecord] {
     lock.lock(); defer { lock.unlock() }
-    return Array(records.suffix(limit).reversed())
+    return Array(records.sorted { $0.receivedAt > $1.receivedAt }.prefix(limit))
   }
 
   public func clear() {

@@ -196,8 +196,11 @@ void __setupProcessEnv(void) {
 }
 
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler {
+  // fleet-native: a content-available push wakes us in the background — record it to the
+  // inbox now, so the text is in `notiflog` even if the banner is never tapped.
+  [[NotificationInbox shared] recordRemoteWithUserInfo:userInfo];
   [[BKiCloudSyncHandler sharedHandler]checkForReachabilityAndSync:nil];
-  // TODO: pass completion handler.
+  completionHandler(UIBackgroundFetchResultNewData);
 }
 
 // fleet-native: APNs device-token callbacks → PushRegistrar.

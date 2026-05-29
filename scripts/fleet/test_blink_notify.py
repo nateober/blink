@@ -28,3 +28,7 @@ def test_requires_token():
 def test_session_included_when_given():
     r = run(["--token", "t", "--title", "T", "--session", "s9", "--dry-run"])
     assert json.loads(r.stdout)["blink"]["session"] == "s9"
+
+def test_payload_sets_content_available_for_background_wake():
+    r = run(["--token", "abc", "--title", "T", "--dry-run"])
+    assert json.loads(r.stdout)["aps"]["content-available"] == 1
