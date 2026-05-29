@@ -72,6 +72,7 @@
 		07FABC4825C9B08100E1CC2C /* BlinkFiles.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 07FABBAF25C9AECF00E1CC2C /* BlinkFiles.framework */; };
 		07FDDC5625C9B28200A40529 /* LibSSH.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = D2334EC425C1C04700385378 /* LibSSH.xcframework */; };
 		0D774CB0BB7C1ADAEF597FCC /* mounts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 563A4C6B82F6FED5F85338BB /* mounts.swift */; };
+		23E148FE8ADC216F4B6FB3BF /* ExitTrailer.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE948F3BADB540C3A2F0504 /* ExitTrailer.swift */; };
 		2F014B9599FEE37ED074EFB4 /* MountManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 550C417C8BDEA43D0FFEA49A /* MountManager.swift */; };
 		31ED4D83B18855E895CE085E /* BookmarkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E1C44F987CE1CC429490D9E /* BookmarkStore.swift */; };
 		449A4E16965AC74D146BE781 /* HeadlessSSHRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 298C43BC9C86A768883707AD /* HeadlessSSHRunner.swift */; };
@@ -852,6 +853,7 @@
 		98271250262E4BDB00F883FA /* BlinkFileProviderExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BlinkFileProviderExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		98271258262E4BDB00F883FA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		98271259262E4BDB00F883FA /* BlinkFileProviderExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BlinkFileProviderExtension.entitlements; sourceTree = "<group>"; };
+		ABE948F3BADB540C3A2F0504 /* ExitTrailer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ExitTrailer.swift; path = tools/FleetCore/Sources/FleetCore/ExitTrailer.swift; sourceTree = SOURCE_ROOT; };
 		B700AED71DD0F2C200100EBF /* CloudKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CloudKit.framework; path = System/Library/Frameworks/CloudKit.framework; sourceTree = SDKROOT; };
 		B75112CB1DE4A7B10040C693 /* BKiCloudConfigurationViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BKiCloudConfigurationViewController.h; sourceTree = "<group>"; };
 		B75112CC1DE4A7B10040C693 /* BKiCloudConfigurationViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BKiCloudConfigurationViewController.m; sourceTree = "<group>"; };
@@ -3402,6 +3404,7 @@
 				31ED4D83B18855E895CE085E /* BookmarkStore.swift in Sources */,
 				2F014B9599FEE37ED074EFB4 /* MountManager.swift in Sources */,
 				A3EF4ACA802B1F62E5979674 /* PushModels.swift in Sources */,
+				23E148FE8ADC216F4B6FB3BF /* ExitTrailer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

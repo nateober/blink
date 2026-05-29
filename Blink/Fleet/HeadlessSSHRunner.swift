@@ -19,7 +19,9 @@ import BlinkConfig
 
 public struct HeadlessSSHResult: Sendable {
   public let stdout: String
-  public let exitOK: Bool
+  public let stderr: String
+  public let exitCode: Int32?   // nil = could not be determined
+  public var exitOK: Bool { (exitCode ?? 0) == 0 }
 }
 
 public enum HeadlessSSHError: Error, LocalizedError {
@@ -45,6 +47,7 @@ public enum HeadlessSSHRunner {
     privateKey: String? = nil,
     password: String? = nil,
     connectionTimeout: Int = 30,
+    overallTimeout: TimeInterval = 30,
     acceptUnknownHostKeys: Bool = false
   ) async throws -> HeadlessSSHResult {
     var authMethods: [AuthMethod] = []
@@ -67,14 +70,48 @@ public enum HeadlessSSHRunner {
       sshDirectory: BlinkPaths.ssh()
     )
 
+    // Wrap so the remote shell emits its $? as a trailing sentinel line we can parse —
+    // the SSH framework does not expose the channel exit status (see ExitTrailer).
+    let wrapped = ExitTrailer.wrap(command)
+
+    // Race the SSH work against an overall deadline so a hung command (e.g. one that
+    // blocks on stdin) fails cleanly instead of wedging the App Intent until iOS kills it.
+    return try await withThrowingTaskGroup(of: HeadlessSSHResult.self) { group in
+      group.addTask {
+        try await runOnce(host: host, config: config, wrappedCommand: wrapped)
+      }
+      group.addTask {
+        try await Task.sleep(nanoseconds: UInt64(overallTimeout * 1_000_000_000))
+        throw HeadlessSSHError.ssh("timed out after \(Int(overallTimeout))s")
+      }
+      defer { group.cancelAll() }
+      guard let first = try await group.next() else {
+        throw HeadlessSSHError.ssh("no result")
+      }
+      return first
+    }
+  }
+
+  private static func runOnce(
+    host: String,
+    config: SSHClientConfig,
+    wrappedCommand: String
+  ) async throws -> HeadlessSSHResult {
     var cancellable: AnyCancellable?
-    var collected = Data()
+    var outData = Data()
+    var errData = Data()
     var resumed = false
 
     return try await withCheckedThrowingContinuation { (cont: CheckedContinuation<HeadlessSSHResult, Error>) in
       cancellable = SSHClient.dial(host, with: config)
-        .flatMap { client in client.requestExec(command: command) }
-        .flatMap { stream in stream.read(max: Int(SSIZE_MAX)) }
+        .flatMap { client in client.requestExec(command: wrappedCommand) }
+        .flatMap { (stream: SSH.Stream) in
+          // Read stdout and stderr to EOF; the channel completes when both drain.
+          Publishers.Zip(
+            stream.read(max: Int(SSIZE_MAX)),
+            stream.read_err(max: Int(SSIZE_MAX))
+          )
+        }
         .sink(
           receiveCompletion: { completion in
             guard !resumed else { return }
@@ -83,13 +120,16 @@ public enum HeadlessSSHRunner {
             case .failure(let error):
               cont.resume(throwing: HeadlessSSHError.ssh(error.localizedDescription))
             case .finished:
-              let out = String(decoding: collected, as: UTF8.self)
-              cont.resume(returning: HeadlessSSHResult(stdout: out, exitOK: true))
+              let parsed = ExitTrailer.parse(String(decoding: outData, as: UTF8.self))
+              let err = String(decoding: errData, as: UTF8.self)
+              cont.resume(returning: HeadlessSSHResult(
+                stdout: parsed.output, stderr: err, exitCode: parsed.exitCode))
             }
             _ = cancellable  // retain until completion
           },
-          receiveValue: { (data: DispatchData) in
-            collected.append(contentsOf: data)
+          receiveValue: { (out: DispatchData, err: DispatchData) in
+            outData.append(contentsOf: out)
+            errData.append(contentsOf: err)
           }
         )
     }
