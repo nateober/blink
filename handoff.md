@@ -1,6 +1,8 @@
 # Blink fork — handoff for the next session
 
-**Last updated:** 2026-05-29 · **Branch:** `feat/fleet-native` · **PR:** nateober/blink#1 (open vs `raw`, not merged)
+**Last updated:** 2026-05-29 · **Branch:** `feat/notification-inbox` · **PR #1 MERGED into `raw`** (fleet-native: folders, App Intents, push — all verified on-device 2026-05-29).
+
+**Post-merge work (on `feat/notification-inbox`, build 1109):** notification inbox — received pushes are persisted (`FleetCore/NotificationLog`, 6 tests) and listed by a new `notiflog` terminal command (newest-first, `[kind host]` tag, title+body; `notiflog clear` empties). Receipt hook in `AppDelegate.m` via the `@objc NotificationInbox` shim (records on willPresent + didReceiveNotificationResponse, deduped). Solves: tapping a banner cleared its text. Sim-verified. Known gap: a push delivered while the app is fully killed is recorded only when tapped.
 
 This is Nate's personal fork of [blinksh/blink](https://github.com/blinksh/blink) (iOS terminal),
 published to **TestFlight for personal use** under bundle id **`com.obercode.blink`** ("Blink For Personal").
