@@ -18,6 +18,11 @@ import Foundation
 import BlinkConfig
 import ios_system
 
+/// POSIX single-quote a shell word (wrap in '…', escaping embedded single quotes).
+private func shQuote(_ s: String) -> String {
+  "'" + s.replacingOccurrences(of: "'", with: "'\\''") + "'"
+}
+
 @_cdecl("fleetexec_main")
 public func fleetexec_main(argc: Int32, argv: Argv) -> Int32 {
   let args = argv.args(count: argc)
@@ -26,7 +31,10 @@ public func fleetexec_main(argc: Int32, argv: Argv) -> Int32 {
     return 1
   }
   let host = args[1]
-  let command = args[2...].joined(separator: " ")
+  // argv has already been tokenized/dequoted by the shell, so re-joining with plain spaces
+  // would corrupt a command like `claude -p "two words"` (the quoted token would split on the
+  // remote side). Re-quote each token so word boundaries survive the round trip.
+  let command = args[2...].map(shQuote).joined(separator: " ")
 
   let sema = DispatchSemaphore(value: 0)
   var outText = ""
@@ -36,6 +44,12 @@ public func fleetexec_main(argc: Int32, argv: Argv) -> Int32 {
 
   Task {
     defer { sema.signal() }
+    // Friendly pre-check (mirrors the App Intent): a truly-unknown alias should say so, not
+    // fall through to a raw "Socket error: No such file or directory" from the connect attempt.
+    guard await MainActor.run(body: { BKHosts.withHost(host) != nil }) else {
+      failure = "No Blink host named '\(host)'. Add it in Blink (config → Hosts) first."
+      return
+    }
     do {
       // Same resolution + auth as the App Intent and the interactive `ssh <alias>`.
       let r = try await HeadlessSSHRunner.run(alias: host, command: command, acceptUnknownHostKeys: true)
