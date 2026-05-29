@@ -71,6 +71,7 @@
 		07FABC2225C9AFC500E1CC2C /* String+Extension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07FABC2125C9AFC400E1CC2C /* String+Extension.swift */; };
 		07FABC4825C9B08100E1CC2C /* BlinkFiles.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 07FABBAF25C9AECF00E1CC2C /* BlinkFiles.framework */; };
 		07FDDC5625C9B28200A40529 /* LibSSH.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = D2334EC425C1C04700385378 /* LibSSH.xcframework */; };
+		084D4A78A7677D2E5F548AAF /* fleetexec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 697C48E6817F4665CE9878A6 /* fleetexec.swift */; };
 		0D774CB0BB7C1ADAEF597FCC /* mounts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 563A4C6B82F6FED5F85338BB /* mounts.swift */; };
 		23E148FE8ADC216F4B6FB3BF /* ExitTrailer.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE948F3BADB540C3A2F0504 /* ExitTrailer.swift */; };
 		2F014B9599FEE37ED074EFB4 /* MountManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 550C417C8BDEA43D0FFEA49A /* MountManager.swift */; };
@@ -845,6 +846,7 @@
 		3E9C41B486B94B1C5178AA29 /* PushModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PushModels.swift; path = tools/FleetCore/Sources/FleetCore/PushModels.swift; sourceTree = SOURCE_ROOT; };
 		550C417C8BDEA43D0FFEA49A /* MountManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MountManager.swift; path = tools/FleetCore/Sources/FleetCore/MountManager.swift; sourceTree = SOURCE_ROOT; };
 		563A4C6B82F6FED5F85338BB /* mounts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = mounts.swift; path = Blink/Commands/mounts.swift; sourceTree = SOURCE_ROOT; };
+		697C48E6817F4665CE9878A6 /* fleetexec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = fleetexec.swift; path = Blink/Commands/fleetexec.swift; sourceTree = SOURCE_ROOT; };
 		803B99D62582869200DC99C8 /* BKNotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BKNotificationsView.swift; sourceTree = "<group>"; };
 		803B99E2258381B200DC99C8 /* SettingsHostingController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsHostingController.swift; sourceTree = "<group>"; };
 		85A34303200A837A009324F1 /* webfontloader.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = webfontloader.js; sourceTree = "<group>"; };
@@ -3693,6 +3695,7 @@
 				449A4E16965AC74D146BE781 /* HeadlessSSHRunner.swift in Sources */,
 				A12D430E83AF3E532A02D536 /* FleetIntents.swift in Sources */,
 				FF9D45DDB1C76A8B1479A403 /* PushRegistrar.swift in Sources */,
+				084D4A78A7677D2E5F548AAF /* fleetexec.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

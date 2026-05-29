@@ -128,6 +128,13 @@
 		<string></string>
 		<string>no</string>
 	</array>
+	<key>fleetexec</key>
+	<array>
+		<string>MAIN</string>
+		<string>fleetexec_main</string>
+		<string></string>
+		<string>no</string>
+	</array>
 	<key>pickFolder</key>
 	<array>
 		<string>MAIN</string>
