@@ -74,6 +74,13 @@ struct RunFleetCommandIntent: AppIntent {
         // normal SSH first-connect UX. The strict default remains for other callers.
         acceptUnknownHostKeys: true
       )
+      // A non-zero remote exit is a real failure — surface it (with stderr) instead of
+      // handing Shortcuts a false success with empty/partial stdout.
+      if let code = result.exitCode, code != 0 {
+        let detail = result.stderr.isEmpty ? result.stdout : result.stderr
+        let trimmed = detail.trimmingCharacters(in: .whitespacesAndNewlines)
+        throw FleetIntentError.runFailed("command exited \(code)" + (trimmed.isEmpty ? "" : ": \(trimmed)"))
+      }
       return .result(value: result.stdout.isEmpty ? "(no output)" : result.stdout)
     } catch let e as FleetIntentError {
       throw e
