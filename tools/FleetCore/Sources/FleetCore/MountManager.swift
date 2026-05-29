@@ -29,4 +29,14 @@ public enum MountManager {
     s = s.trimmingCharacters(in: .whitespacesAndNewlines)
     return s.isEmpty ? "mount" : s
   }
+
+  /// Return `base` if free, else the lowest `base-N` (N≥2) not in `existing`.
+  /// Callers pass the already-sanitized base name.
+  public static func uniqueName(base: String, existing: [String]) -> String {
+    let set = Set(existing)
+    if !set.contains(base) { return base }
+    var n = 2
+    while set.contains("\(base)-\(n)") { n += 1 }
+    return "\(base)-\(n)"
+  }
 }
