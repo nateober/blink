@@ -1,4 +1,4 @@
-#!/usr/bin/env -S uv run --quiet --with PyJWT --with cryptography --with "httpx[http2]" --python 3.12 --
+#!/usr/bin/env -S uv run --quiet --with PyJWT --with cryptography --with httpx[http2] --python 3.12 --
 """blink-notify — send an agent-attention push to the Blink iOS app via APNs.
 
 Meant to run on a fleet host (Ada/Vera/Max), invoked from a `claude -p` wrapper when
