@@ -35,7 +35,10 @@ private enum ScopeHolder {
   private static var current: URL?
   static func enter(_ url: URL) {
     lock.lock(); defer { lock.unlock() }
-    if let prev = current, prev != url { prev.stopAccessingSecurityScopedResource() }
+    // Always release the previous scope before starting a new one — even when re-entering
+    // the SAME url, since startAccessingSecurityScopedResource is refcounted and would
+    // otherwise climb without a matching stop.
+    current?.stopAccessingSecurityScopedResource()
     _ = url.startAccessingSecurityScopedResource()
     current = url
   }
