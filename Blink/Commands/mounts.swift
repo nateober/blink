@@ -28,6 +28,19 @@ private func markStore() -> BookmarkStore {
   return BookmarkStore(storeURL: url)
 }
 
+/// Holds the one security-scoped URL the terminal is currently "inside", so a new
+/// pickFolder/jump releases the previous scope instead of leaking it for the session.
+private enum ScopeHolder {
+  private static let lock = NSLock()
+  private static var current: URL?
+  static func enter(_ url: URL) {
+    lock.lock(); defer { lock.unlock() }
+    if let prev = current, prev != url { prev.stopAccessingSecurityScopedResource() }
+    _ = url.startAccessingSecurityScopedResource()
+    current = url
+  }
+}
+
 #if targetEnvironment(macCatalyst)
 private let bookmarkCreateOptions: URL.BookmarkCreationOptions = [.withSecurityScope]
 private let bookmarkResolveOptions: URL.BookmarkResolutionOptions = [.withSecurityScope]
@@ -62,7 +75,8 @@ private final class FolderPicker: NSObject, UIDocumentPickerDelegate {
   }
 
   func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-    if let u = urls.first { _ = u.startAccessingSecurityScopedResource(); picked = u }
+    // Scope is taken (and the prior one released) by ScopeHolder.enter in pickFolder_main.
+    if let u = urls.first { picked = u }
     sema.signal()
   }
   func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
@@ -85,10 +99,15 @@ public func pickFolder_main(argc: Int32, argv: Argv) -> Int32 {
   }
   do {
     let data = try url.bookmarkData(options: bookmarkCreateOptions, includingResourceValuesForKeys: nil, relativeTo: nil)
-    let name = MountManager.sanitized(name: url.lastPathComponent)
     let store = markStore()
+    let base = MountManager.sanitized(name: url.lastPathComponent)
+    // Refresh in place if this exact path is already marked; else pick a unique name so a
+    // second folder with the same leaf name doesn't silently clobber the first's bookmark.
+    let existingForPath = store.names().first { (try? store.resolve(name: $0))?.url.path == url.path }
+    let name = existingForPath ?? MountManager.uniqueName(base: base, existing: store.names())
     if store.names().contains(name) { try store.update(name: name, bookmark: data) }
     else { try store.add(name: name, bookmark: data) }
+    ScopeHolder.enter(url)
     FileManager.default.changeCurrentDirectoryPath(url.path)
     mOut("Mounted '\(name)' -> \(url.path)")
     mOut("(jump \(name) to return here)")
@@ -136,7 +155,7 @@ public func jump_main(argc: Int32, argv: Argv) -> Int32 {
   let store = markStore()
   do {
     let r = try store.resolve(name: name)
-    _ = r.url.startAccessingSecurityScopedResource()
+    ScopeHolder.enter(r.url)
     if FileManager.default.changeCurrentDirectoryPath(r.url.path) {
       mOut(r.url.path)
       return 0
