@@ -72,5 +72,11 @@ Each item names the TestFlight build it first shipped in.
 - 1107 — **root-cause fix for the Shortcut "unknown error":** HeadlessSSHRunner now drives a
          RunLoop on a dedicated thread (the headless SSH dial used to hang). Adds `fleetexec`
          terminal command. Sim-verified: dial fails fast with a real SSH error, no 30s hang.
-- Test on the latest (1107). On-device: set the host's HostName to its Tailscale IP (e.g.
-  ada → 100.64.0.3), then run the Shortcut / `fleetexec ada uptime` — should return output now.
+- 1108 — **auth fix:** the Shortcut/`fleetexec` reached SSH but failed (`SSHError error 3`).
+         Cause: headless auth hand-rolled key+password, but Blink uses a pure-agent model
+         (agent + default keys + keyboard-interactive). HeadlessSSHRunner now resolves+auths via
+         `BKConfig` + agent exactly like `ssh <alias>`. Also surfaces SSHError's real description.
+         Sim-verified: readable errors, fast, no crash (real-key success is on-device only).
+- Test on the latest (1108). On-device: host HostName already set to Tailscale IP (ada →
+  100.64.0.3). Run `fleetexec ada uptime` in the terminal (fastest) or the Shortcut — should
+  return output now. If it still errors, the message is now a readable SSH reason — capture it.
