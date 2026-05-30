@@ -100,6 +100,11 @@ public func pickFolder_main(argc: Int32, argv: Argv) -> Int32 {
   guard let url = FolderPicker().present(from: session) else {
     mOut("pickFolder: cancelled"); return 0
   }
+  // Start security-scoped access BEFORE reading the URL. A picker URL (especially an iCloud
+  // one) isn't reachable until access is started — reading the bookmark or cd'ing first throws
+  // "the folder doesn't exist". For iCloud, nudge materialization too.
+  ScopeHolder.enter(url)
+  try? FileManager.default.startDownloadingUbiquitousItem(at: url)
   do {
     let data = try url.bookmarkData(options: bookmarkCreateOptions, includingResourceValuesForKeys: nil, relativeTo: nil)
     let store = markStore()
@@ -110,7 +115,6 @@ public func pickFolder_main(argc: Int32, argv: Argv) -> Int32 {
     let name = existingForPath ?? MountManager.uniqueName(base: base, existing: store.names())
     if store.names().contains(name) { try store.update(name: name, bookmark: data) }
     else { try store.add(name: name, bookmark: data) }
-    ScopeHolder.enter(url)
     FileManager.default.changeCurrentDirectoryPath(url.path)
     mOut("Mounted '\(name)' -> \(url.path)")
     mOut("(jump \(name) to return here)")
@@ -241,6 +245,10 @@ private func applyPathMarks() -> [String] {
 public func addpath_main(argc: Int32, argv: Argv) -> Int32 {
   guard let session = currentSession() else { mErr("addpath: no session"); return 1 }
   guard let url = FolderPicker().present(from: session) else { mOut("addpath: cancelled"); return 0 }
+  // Start access BEFORE reading the URL (iCloud folders are unreachable otherwise — see
+  // pickFolder); applyPathMarks re-holds it for the session. Nudge iCloud materialization.
+  _ = url.startAccessingSecurityScopedResource()
+  try? FileManager.default.startDownloadingUbiquitousItem(at: url)
   do {
     let data = try url.bookmarkData(options: bookmarkCreateOptions, includingResourceValuesForKeys: nil, relativeTo: nil)
     let store = pathMarkStore()
