@@ -142,6 +142,13 @@
 		<string></string>
 		<string>no</string>
 	</array>
+	<key>liveactivity</key>
+	<array>
+		<string>MAIN</string>
+		<string>liveactivity_main</string>
+		<string></string>
+		<string>no</string>
+	</array>
 	<key>rmpath</key>
 	<array>
 		<string>MAIN</string>
