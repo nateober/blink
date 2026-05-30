@@ -44,7 +44,7 @@ heavy travel, all-iCloud config). Built almost entirely autonomously via a Ralph
 
 ## The build pipeline — `scripts/release.sh` (READ THIS before building)
 One command: archives → symbol-guards → uploads → waits for ASC processing → attaches to the internal group, auto-bumping the build number from the ASC max. Critical hard-won flags it encodes:
-- **`STRIP_STYLE=non-global` + `DEAD_CODE_STRIPPING=NO` + `BLINK_OTHER_LDFLAGS=-Wl,-export_dynamic`** — Blink dispatches built-in commands via `dlsym(RTLD_MAIN_ONLY, "<cmd>_main")`. The default `strip -all` deletes those symbols (only referenced by dlsym string), breaking EVERY built-in command at runtime (`config: command not found`). These flags keep them. **Symbol guard:** after archive, `xcrun dyld_info -exports .../Blink.app/Blink | grep -cE '_main$'` must be ≥ 22 (currently 28 = 22 base + 6 new mount commands).
+- **`STRIP_STYLE=non-global` + `DEAD_CODE_STRIPPING=NO` + `BLINK_OTHER_LDFLAGS=-Wl,-export_dynamic`** — Blink dispatches built-in commands via `dlsym(RTLD_MAIN_ONLY, "<cmd>_main")`. The default `strip -all` deletes those symbols (only referenced by dlsym string), breaking EVERY built-in command at runtime (`config: command not found`). These flags keep them. **Symbol guard:** after archive, `xcrun dyld_info -exports .../Blink.app/Blink | grep -cE '_main$'` must be ≥ 22 (currently ~34 = 22 base + the added fleet/mount/PATH/notif commands).
 - **`/usr/bin` ahead of PATH** for export — Homebrew `rsync 3.4.x` breaks Xcode's IPA packaging ("Copy failed"); Apple's openrsync works.
 - Auth via the ASC API key (`-authenticationKey*`) so signing + upload are unattended.
 - **release.sh runs detached via `nohup ... &`** in practice (long: ~15 min incl. ASC processing). To know when it's done, poll the log or run a background `until grep -qE "Attached build|FAILED" /tmp/release_*.log; do sleep 20; done`.
@@ -53,7 +53,7 @@ One command: archives → symbol-guards → uploads → waits for ASC processing
 The high-level `mod-pbxproj add_file()` **crashes** on this SPM-heavy project (build files without `fileRef`). The helper uses the low-level object API instead. **Quirks:** NOT idempotent (its dup-check doesn't match) — always run on a clean pbxproj and add each file exactly once; verify with `grep -c "<File>.swift in Sources"` (expect 2 = build-file def + phase ref). It also cosmetically strips comment labels from `PBXFileSystemSynchronizedBuildFileExceptionSet` (Xcode 16 synced-folders); harmless. Always compile-verify after.
 
 ## Testing iOS here — what works / what doesn't (each gotcha cost a build cycle)
-- **Pure logic → `FleetCore` SPM package** (`tools/FleetCore`): `swift test` runs Mac-native in ~0.01s, no sim/xcframeworks. The SAME .swift files are added to the `BlinkConfig` framework target for the app. 12 tests green. THIS is the fast verification path.
+- **Pure logic → `FleetCore` SPM package** (`tools/FleetCore`): `swift test` runs Mac-native in ~0.03s, no sim/xcframeworks. The SAME .swift files are added to the `BlinkConfig` framework target for the app (via `add_to_target.py`). 42 tests green. THIS is the fast verification path.
 - **Sim builds work** (xcframeworks have sim slices): `-destination 'platform=iOS Simulator,name=iPhone 17,OS=26.5'`.
 - **`simctl` is the verification toolkit:** boot / install / launch / **push** (`simctl push booted com.obercode.blink payload.json`) / `io screenshot` (then Read the PNG to verify visually) / openurl / privacy. Push delivery + the notification-permission prompt were verified this way.
 - **Mac Catalyst native tests FAIL** — vendored xcframeworks (openssl/OpenSSH/vim/...) have **no Catalyst slices**.
@@ -62,40 +62,42 @@ The high-level `mod-pbxproj add_file()` **crashes** on this SPM-heavy project (b
 - **App Intents mask errors:** a thrown error that isn't `CustomLocalizedStringResourceConvertible` shows as "unspecified error" in Shortcuts. Always wrap.
 - **No UI automation wired** — taps/typing on the sim need `idb` or XCUITest (NOT installed). This blocked autonomous testing of the picker + Shortcut. See "ios-tester agent" below.
 
-## The three features
-### A. Mountable iCloud/Files folders
-Commands `pickFolder` / `bookmark` / `showmarks` / `jump` / `renamemark` / `deletemark` (model: chdir into a security-scoped folder, NOT `~/mnt` symlinks). Code: `Blink/Commands/mounts.swift` (the `@_cdecl *_main` shims) + `tools/FleetCore/Sources/FleetCore/{BookmarkStore,MountManager}.swift` (tested core). Registered in `Resources/blinkCommandsDictionary.plist`. `Info.plist` `NSUbiquitousContainers` repointed to `iCloud.com.obercode.blink` so the app's iCloud folder is Finder-visible on Macs. `cd ~<mark>` shell-tilde syntax NOT implemented (use `jump`). PATH-inclusion for mounted `bin/` DEFERRED (YAGNI).
+## Features & where the code lives (current architecture)
+Pure, testable logic → `tools/FleetCore/Sources/FleetCore/*` (dual-added to the `BlinkConfig` target; `swift test` = 42 tests). App-layer commands are `@_cdecl *_main` shims registered in `Resources/blinkCommandsDictionary.plist`. Add new files to the Xcode target with `tools/add_to_target.py` (see above).
 
-### B. App Intents / Shortcuts — "Run `<cmd>` on `<host>`"
-`Blink/Fleet/FleetIntents.swift` (`RunFleetCommandIntent`, `BlinkFleetShortcuts`) + `Blink/Fleet/HeadlessSSHRunner.swift` (one-shot SSH exec on `SSHClient.dial → requestExec → Stream.read`, Combine→async). Resolves user/host/key from `BKHosts.withHost` + `BKPubKey.loadPrivateKey`, AND the stored password (`h.password`). Host-key: strict (reject unknown) by default, but the intent passes `acceptUnknownHostKeys: true` (trust-on-first-use for owner's own fleet). In-app App Intent (no extension target). **Compile-verified only — never run on device successfully yet (see open threads).**
-
-### C. Push notifications
-`Blink/Fleet/PushRegistrar.swift` (@objc; register + capture APNs token + persist via `APNSTokenStore` + best-effort SSH-publish token to `~/.blink-notify/token` on host alias "push-notify"/"ada") hooked into `Blink/AppDelegate.m` (didFinishLaunching + didRegister callbacks). Payload models + token store in `tools/FleetCore/Sources/FleetCore/PushModels.swift`. Fleet sender: `scripts/fleet/blink_notify.py` (+ README, 4 pytest green). `aps-environment` entitlement present + in signed builds; Push capability auto-provisioned on the App ID. **Live Activity DEFERRED** (needs a widget-extension target). Push *delivery+handling* verified on sim via `simctl push`; real APNs end-to-end needs a device token (only appears once the app runs on Nate's iPhone).
+- **A. Mountable iCloud/Files folders** — `Blink/Commands/mounts.swift`. Commands `pickFolder`/`bookmark`/`showmarks`/`jump`/`renamemark`/`deletemark`. **Model (changed):** a picked folder is linked into `~/<name>` via Blink's native `BookmarkedLocationsManager` (symlink + `ios_setAllowedPaths` registration via `MCPSession.updateAllowedPaths`) — NOT chdir into the raw path (that was outside the ios_system mini-root and un-navigable). Start security scope BEFORE reading the picker URL (iCloud needs it). Name logic in `FleetCore/MountManager`.
+- **PATH inclusion** — same file: `addpath`/`rmpath`/`showpath`. Links a folder into `~` then prepends `~/<name>` to `$PATH` (recomputed from a captured base; re-applied at launch via `FleetPath.apply` in `AppDelegate.m`). Pure `FleetCore/PathManager`.
+- **B. App Intents / Shortcuts** — `Blink/Fleet/FleetIntents.swift`: `RunFleetCommandIntent` (one command) + `RunFleetScriptIntent` (multi-line bash/sh/zsh/python3, base64-piped via `FleetCore/FleetScript`) + `BlinkFleetShortcuts`. Terminal twin: `Blink/Commands/fleetexec.swift`. All run through **`Blink/Fleet/HeadlessSSHRunner.run(alias:command:)`** — dials on a **dedicated Thread that spins its run loop** (the SSH framework only progresses while its captured run loop runs), auths exactly like `ssh <alias>` (`BKConfig` + `SSHAgent` w/ host-or-default signers + keyboard-interactive), captures stdout/stderr + real exit code (in-band `FleetCore/ExitTrailer` trailer), 30s deadline, case-aware host-key callback (pin new, reject changed). **Works on device** (Nate confirmed).
+- **C. Push + notification inbox** — `Blink/Fleet/PushRegistrar.swift` (register/capture token, publish to `~/.blink-notify/token`) + `Blink/Fleet/NotificationInbox.swift` (@objc shim) + `FleetCore/NotificationLog.swift` + `Blink/Commands/notiflog.swift`. `AppDelegate.m` records on willPresent/didReceiveResponse + `didReceiveRemoteNotification` (background `content-available` capture). Payload models `FleetCore/PushModels`. Fleet sender `scripts/fleet/blink_notify.py` (6 pytest). **Verified on device** (Nate confirmed a real push).
+- **D. Live Activity** — `Blink/Fleet/FleetActivity{Attributes,Controller}.swift` + `Blink/Commands/liveactivity.swift` (app-side, compiles) + widget UI staged in `BlinkWidgets/`. `NSSupportsLiveActivities=YES`. `blink_notify --live-activity-event update|end`. **Dormant until the widget-extension target is added in Xcode — `docs/LIVE-ACTIVITY-SETUP.md`.**
 
 ## Open threads (what's actually left)
-1. **Device acceptance (Nate-only):** install 1105, test the Shortcut (the "unspecified error" should now show the real cause), the folder picker, and `ssh <alias>` in the terminal.
-2. **The Shortcut bug:** Nate hit "unspecified error" on a host he created IN the fork. 1105 surfaces the real error + does trust-on-first-use. If it still fails, the surfaced "SSH failed: …" message tells us the cause (auth / unreachable / etc.). **Reachability caveat:** fleet hosts are LAN IPs (e.g. ada = 192.168.86.21) — the Shortcut/SSH only works when the phone is on the home LAN or WireGuard, NOT cellular. This may be the real cause.
-3. **Saved-hosts question:** Nate asked "why no way to load saved hosts via a command?" Answer: `ssh <alias>` / `mosh <alias>` use saved Host config. Pending: confirm `ssh <alias>` resolves saved hosts in the fork (should — it's core Blink). If not, separate bug.
-4. **Push end-to-end:** APNs key is in place. Need the device token (install 1105 → allow notifications → token publishes to `~/.blink-notify/token` on ada, or read it from the `[blink-notify] APNs device token: …` log line). Then `scripts/fleet/blink_notify.py` fires a test push.
-5. **PR #1:** review/merge decision is Nate's (left unmerged pending device tests).
-6. **ios-tester agent (proposed, not built):** Nate asked about a reusable iPhone-testing agent. Recommendation: build `~/.claude/agents/ios-tester.md` encoding this file's "Testing iOS here" section, AND install `idb` (Meta's iOS Debug Bridge) for real UI automation (tap/type/swipe) — the missing primitive that blocked autonomous picker/Shortcut testing. Awaiting Nate's go.
-7. **Deferred by design (YAGNI):** mount PATH-inclusion; Live Activity (widget extension).
-8. **iCloud container separation:** this fork (`iCloud.com.obercode.blink`) is SEPARATE from official Blink (`sh.blink.blinkshell`) — hosts/keys/snippets do NOT carry over. Nate confirmed he created hosts IN the fork, so this isn't the current blocker, but remember it.
-9. **Entitlements oddity:** Xcode auto-management left empty `keychain-access-groups <array/>`, `associated-domains <array/>`, `user-fonts <array/>`. Host passwords use `accessGroup:nil` (default group) so they work, but the empty keychain-access-groups could affect the FileProvider extension's credential sharing. Not confirmed broken; watch for it.
+All in **Nate's hands** (see the "Open (Nate's call)" bullet up top):
+1. **Live Activity widget target** — add it in Xcode per `docs/LIVE-ACTIVITY-SETUP.md`, then a build lights up the lock screen / Dynamic Island.
+2. **Merge PR #2** (`feat/notification-inbox` → `raw`) when satisfied.
+3. **On-device acceptance** of the newest features: iCloud-folder linking into `~`, `addpath`→`$PATH` membership + real-iCloud download, `Run Fleet Script`, and real-APNs push end-to-end.
+
+### Background / watch-items (still true, lower priority)
+- **iCloud container separation:** this fork uses `iCloud.com.obercode.blink`, SEPARATE from official Blink (`sh.blink.blinkshell`) — hosts/keys/snippets don't carry over. Not a blocker (Nate configured hosts in the fork).
+- **Entitlements oddity:** Xcode auto-management left empty `keychain-access-groups`/`associated-domains`/`user-fonts` arrays. Host passwords use the default access group so they work; the empty keychain-access-groups *could* affect FileProvider credential sharing. Not confirmed broken; watch for it.
+- **`BlinkTests` target is pre-broken upstream** (unrelated `MCPParams`/`BKSessionParamsSnapshotting` compile errors) — can't run `-only-testing` there; that's why the SSH behavioral test lives unreached. Pure logic is covered by FleetCore instead.
+- **Distribution:** stays TestFlight-only, **not App Store** — GPL-3.0 code Nate doesn't hold copyright to + App-Store-terms conflict + "Blink" trademark. (See README + `[[blink-shell-fork]]` wiki page.)
 
 ## Process artifacts
-- **Spec:** `docs/superpowers/specs/2026-05-25-fleet-native-blink-design.md`
-- **Plan (with all task statuses + recon findings):** `docs/superpowers/plans/2026-05-25-fleet-native-blink.md`
+- **Docs dir `docs/`:** original spec/plan (`superpowers/specs|plans/2026-05-25-fleet-native-blink*`), the hardening spec+plan (`2026-05-29-fleet-native-hardening*`), the reachability spec (`2026-05-29-fleet-reachability-design.md`), the multi-agent review record (`superpowers/reviews/2026-05-29-fleet-review.md`), and **`docs/LIVE-ACTIVITY-SETUP.md`** (the widget-target steps).
 - **Manual/on-device acceptance checklist:** `MANUAL-TESTS.md`
+- **README:** documents the fork's changes + upstream credit / GPL notice. Wiki: `[[blink-shell-fork]]`.
 - **Live web build-log (Nate watches this):** `~/loop-log/index.html` (generator `~/loop-log/gen.py`, `gen.py add --iter N --phase ... --title ... --body ... [--build N] [--image f.png]`; auto-refreshes every 20s). 17 passes recorded.
 - This was driven by the **ralph-loop** plugin (`/ralph-loop`, cancel with `/cancel-ralph`). It was cancelled at iteration 21.
 
 ## How to resume cold
 ```bash
-cd ~/code/blink && git checkout feat/fleet-native && git log --oneline -8
-swift test --package-path tools/FleetCore        # 12 tests green = core healthy
+cd ~/code/blink && git checkout feat/notification-inbox && git log --oneline -10
+swift test --package-path tools/FleetCore        # 42 tests green = core healthy
 cat MANUAL-TESTS.md                               # what needs device testing
-# to cut a new build: scripts/release.sh  (see flags above; ~15 min)
-# to verify a fix on sim: build for sim → simctl install/launch/push → simctl io screenshot → Read the png
+gh pr view 2 --repo nateober/blink                # open PR with all post-merge work
+# to cut a new build: scripts/release.sh  (detached, ~15 min; see flags above)
+# to verify a fix on sim: build for sim (XcodeBuildMCP build_sim) → simctl install/launch/push
+#   → simctl io screenshot → Read the png; or dispatch the `ios-tester` agent to drive the UI
 ```
-Conventions: Conventional Commits, no AI trailer (per Nate's global CLAUDE.md). Commit/push only when asked. Branch off `raw`, never commit straight to it for shared work (this fork's `raw` is the buildable baseline).
+Conventions: Conventional Commits, **no AI trailer / no Claude name in commits** (per Nate's global CLAUDE.md). Commit/push only when asked. PR #1 is merged into `raw`; ongoing work is on `feat/notification-inbox` (PR #2). `raw` is the buildable baseline — branch off it, don't commit straight to it.
