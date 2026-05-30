@@ -484,6 +484,7 @@
 		D2F330DA20A7127B0074ADD7 /* open.m in Sources */ = {isa = PBXBuildFile; fileRef = D2F330D920A7127B0074ADD7 /* open.m */; };
 		D2FBEC0B27CF505D00FD974A /* browse.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2FBEC0727CF505D00FD974A /* browse.swift */; };
 		D2FCB4DD2339F9DB00A88108 /* UIScrollView+Paging.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2FCB4DC2339F9DB00A88108 /* UIScrollView+Paging.swift */; };
+		DAEE42ADBB621EEC06BB2B5B /* PathManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E566472EA570311187C36EB5 /* PathManager.swift */; };
 		FF9D45DDB1C76A8B1479A403 /* PushRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA82458DB0E808054C4BFB1B /* PushRegistrar.swift */; };
 /* End PBXBuildFile section */
 
@@ -1252,6 +1253,7 @@
 		D2FBEC0727CF505D00FD974A /* browse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = browse.swift; sourceTree = "<group>"; };
 		D2FCB4DC2339F9DB00A88108 /* UIScrollView+Paging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIScrollView+Paging.swift"; sourceTree = "<group>"; };
 		DA82458DB0E808054C4BFB1B /* PushRegistrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PushRegistrar.swift; path = Blink/Fleet/PushRegistrar.swift; sourceTree = SOURCE_ROOT; };
+		E566472EA570311187C36EB5 /* PathManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PathManager.swift; path = tools/FleetCore/Sources/FleetCore/PathManager.swift; sourceTree = SOURCE_ROOT; };
 		EA0BA18B1C0CC57B00719C1A /* Blink.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Blink.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -3414,6 +3416,7 @@
 				A3EF4ACA802B1F62E5979674 /* PushModels.swift in Sources */,
 				23E148FE8ADC216F4B6FB3BF /* ExitTrailer.swift in Sources */,
 				ADDE4B2483211C267F281F81 /* NotificationLog.swift in Sources */,
+				DAEE42ADBB621EEC06BB2B5B /* PathManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -102,6 +102,7 @@ void __setupProcessEnv(void) {
     addCommandList([[NSBundle mainBundle] pathForResource:@"blinkCommandsDictionary" ofType:@"plist"]); // Load blink commands to ios_system
     __setupProcessEnv(); // we should call this after ios_system initializeEnvironment to override its defaults.
     [AppDelegate _loadProfileVars];
+    [FleetPath apply]; // fleet-native: re-apply persisted addpath folders onto $PATH
   });
   
   NSString *homePath = BlinkPaths.homePath;

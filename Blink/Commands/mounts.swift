@@ -183,3 +183,107 @@ public func deletemark_main(argc: Int32, argv: Argv) -> Int32 {
   do { try markStore().delete(name: args[1]); mOut("Deleted '\(args[1])'."); return 0 }
   catch { mErr("deletemark: no such bookmark '\(args[1])'"); return 1 }
 }
+
+// MARK: - PATH inclusion (addpath / rmpath / showpath)
+//
+// Folders the user opts onto $PATH so their scripts/commands resolve by name. Persisted as
+// security-scoped bookmarks (separate from mount marks) and re-applied at launch via
+// FleetPath.apply. iOS can't exec native binaries — this serves ios_system-runnable scripts.
+
+private func pathMarkStore() -> BookmarkStore {
+  let url = URL(fileURLWithPath: BlinkPaths.blink()).appendingPathComponent("pathmarks.plist")
+  return BookmarkStore(storeURL: url)
+}
+
+/// Holds the original $PATH (captured once) so PATH can be recomputed from a clean base when
+/// folders are added/removed, and tracks which scopes we've already opened (refcount hygiene).
+private enum PathState {
+  static let lock = NSLock()
+  static var base: String?
+  static var openedScopes = Set<String>()
+}
+
+private func currentPATH() -> String {
+  guard let p = getenv("PATH") else { return "" }
+  return String(cString: p)
+}
+
+/// Resolve all path-marked folders, hold security-scoped access, best-effort materialize iCloud
+/// contents, and rebuild $PATH = (resolved dirs) prepended to the captured base PATH.
+@discardableResult
+private func applyPathMarks() -> [String] {
+  PathState.lock.lock(); defer { PathState.lock.unlock() }
+  let current = currentPATH()
+  if PathState.base == nil { PathState.base = current }
+  let base = PathState.base ?? current
+
+  let store = pathMarkStore()
+  var dirs: [String] = []
+  for name in store.names() {
+    guard let r = try? store.resolve(name: name) else { continue }
+    if !PathState.openedScopes.contains(r.url.path) {
+      if r.url.startAccessingSecurityScopedResource() { PathState.openedScopes.insert(r.url.path) }
+    }
+    // Pull the folder down from iCloud so its scripts are materialized (no-op if not ubiquitous).
+    try? FileManager.default.startDownloadingUbiquitousItem(at: r.url)
+    dirs.append(r.url.path)
+  }
+  setenv("PATH", PathManager.prepend(dirs, to: base), 1)
+  return dirs
+}
+
+/// ObjC-callable entry point so AppDelegate can re-apply persisted PATH folders at launch.
+@objc public final class FleetPath: NSObject {
+  @objc public static func apply() { applyPathMarks() }
+}
+
+@_cdecl("addpath_main")
+public func addpath_main(argc: Int32, argv: Argv) -> Int32 {
+  guard let session = currentSession() else { mErr("addpath: no session"); return 1 }
+  guard let url = FolderPicker().present(from: session) else { mOut("addpath: cancelled"); return 0 }
+  do {
+    let data = try url.bookmarkData(options: bookmarkCreateOptions, includingResourceValuesForKeys: nil, relativeTo: nil)
+    let store = pathMarkStore()
+    let base = MountManager.sanitized(name: url.lastPathComponent)
+    let existingForPath = store.names().first { (try? store.resolve(name: $0))?.url.path == url.path }
+    let name = existingForPath ?? MountManager.uniqueName(base: base, existing: store.names())
+    if store.names().contains(name) { try store.update(name: name, bookmark: data) }
+    else { try store.add(name: name, bookmark: data) }
+    applyPathMarks()
+    mOut("Added '\(name)' to PATH -> \(url.path)")
+    mOut("(rmpath \(name) to remove; showpath to list)")
+    return 0
+  } catch { mErr("addpath: \(error.localizedDescription)"); return 1 }
+}
+
+@_cdecl("rmpath_main")
+public func rmpath_main(argc: Int32, argv: Argv) -> Int32 {
+  let args = argv.args(count: argc)
+  guard args.count > 1 else { mErr("usage: rmpath <name>  (see showpath)"); return 1 }
+  do {
+    try pathMarkStore().delete(name: args[1])
+    applyPathMarks()
+    mOut("Removed '\(args[1])' from PATH.")
+    return 0
+  } catch { mErr("rmpath: not on PATH: '\(args[1])'"); return 1 }
+}
+
+@_cdecl("showpath_main")
+public func showpath_main(argc: Int32, argv: Argv) -> Int32 {
+  let store = pathMarkStore()
+  let names = store.names()
+  if names.isEmpty {
+    mOut("No folders on PATH. Use addpath to pick one.")
+  } else {
+    mOut("On PATH:")
+    for name in names {
+      if let r = try? store.resolve(name: name) {
+        mOut("  \(name)\t\(r.url.path)\(r.isStale ? "  (stale)" : "")")
+      } else {
+        mOut("  \(name)\t(unresolvable)")
+      }
+    }
+  }
+  mOut("PATH=\(currentPATH())")
+  return 0
+}
