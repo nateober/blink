@@ -1269,8 +1269,16 @@ extension SpaceController: SnippetContext {
 // MARK: SceneIntent handlers
 extension SpaceController {
   @objc func runShellSessionIntent(command: String = "") {
-    DispatchQueue.main.sync {
-      self._newShellAction(command: command)
+    // Callers reach here both on the main thread (the in-app "Create" tab menu
+    // action) and potentially off it (URL / App-Intent entry points). A bare
+    // DispatchQueue.main.sync traps with "dispatch_sync called on queue already
+    // owned by current thread" when we're already on main, so guard for it.
+    if Thread.isMainThread {
+      _newShellAction(command: command)
+    } else {
+      DispatchQueue.main.sync {
+        self._newShellAction(command: command)
+      }
     }
   }
 
