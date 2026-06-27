@@ -429,6 +429,13 @@ extension KBView: KBKeyViewDelegate {
       return
     }
 
+    // tmux action menu key: emit backtick + space (tmux prefix + Space) as raw
+    // bytes, the same path Custom Presses use, so tmux opens its display-menu.
+    if case .tmuxMenu = value {
+      keyInput.reportHex("6020")
+      return
+    }
+
     // Handle command buttons (hideKB, etc.) - send directly as commands
     if value.isCommand, let commandName = value.input {
       keyInput.onCommand(commandName)
