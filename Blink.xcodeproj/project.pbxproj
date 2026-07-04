@@ -73,10 +73,15 @@
 		07FDDC5625C9B28200A40529 /* LibSSH.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = D2334EC425C1C04700385378 /* LibSSH.xcframework */; };
 		084D4A78A7677D2E5F548AAF /* fleetexec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 697C48E6817F4665CE9878A6 /* fleetexec.swift */; };
 		0D774CB0BB7C1ADAEF597FCC /* mounts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 563A4C6B82F6FED5F85338BB /* mounts.swift */; };
+		11DE4E97AD77A47E258C9685 /* NotificationInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F742FBB5A70262436FFCB3 /* NotificationInbox.swift */; };
 		23E148FE8ADC216F4B6FB3BF /* ExitTrailer.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE948F3BADB540C3A2F0504 /* ExitTrailer.swift */; };
+		28634BA48A4F86F0917FD27C /* notiflog.swift in Sources */ = {isa = PBXBuildFile; fileRef = B87A4459AAA1A9144D431E7F /* notiflog.swift */; };
 		2F014B9599FEE37ED074EFB4 /* MountManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 550C417C8BDEA43D0FFEA49A /* MountManager.swift */; };
 		31ED4D83B18855E895CE085E /* BookmarkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E1C44F987CE1CC429490D9E /* BookmarkStore.swift */; };
 		449A4E16965AC74D146BE781 /* HeadlessSSHRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 298C43BC9C86A768883707AD /* HeadlessSSHRunner.swift */; };
+		45B249539BB2823BC38AA435 /* FleetScript.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311C4648A219954E177F837C /* FleetScript.swift */; };
+		4BF54BEFB4F1587925A69EBD /* FleetActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B6F484497B202D9902C7DD8 /* FleetActivityAttributes.swift */; };
+		52304E32B9D950805DDD4DEC /* FleetActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B904FE1A827770F990CE9A7 /* FleetActivityController.swift */; };
 		803B99D72582869200DC99C8 /* BKNotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 803B99D62582869200DC99C8 /* BKNotificationsView.swift */; };
 		803B99E3258381B200DC99C8 /* SettingsHostingController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 803B99E2258381B200DC99C8 /* SettingsHostingController.swift */; };
 		85A34307200A837A009324F1 /* webfontloader.js in Resources */ = {isa = PBXBuildFile; fileRef = 85A34303200A837A009324F1 /* webfontloader.js */; };
@@ -84,6 +89,7 @@
 		9827126B262E4BDB00F883FA /* BlinkFileProviderExtension.appex in Embed PlugIns */ = {isa = PBXBuildFile; fileRef = 98271250262E4BDB00F883FA /* BlinkFileProviderExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A12D430E83AF3E532A02D536 /* FleetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCD14596A11D1B5F0CC59170 /* FleetIntents.swift */; };
 		A3EF4ACA802B1F62E5979674 /* PushModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E9C41B486B94B1C5178AA29 /* PushModels.swift */; };
+		ADDE4B2483211C267F281F81 /* NotificationLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CEB4798B1DCA7E955CE7C2F /* NotificationLog.swift */; };
 		B700AED81DD0F2C200100EBF /* CloudKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B700AED71DD0F2C200100EBF /* CloudKit.framework */; };
 		B75112CD1DE4A7B10040C693 /* BKiCloudConfigurationViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = B75112CC1DE4A7B10040C693 /* BKiCloudConfigurationViewController.m */; };
 		B752EE2B1DFEF19D00E305C8 /* BKUserConfigurationManager.m in Sources */ = {isa = PBXBuildFile; fileRef = B752EE2A1DFEF19D00E305C8 /* BKUserConfigurationManager.m */; };
@@ -216,6 +222,7 @@
 		BDD6D149275951D900E76F1F /* BKGlobalSSHConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDD6D148275951D900E76F1F /* BKGlobalSSHConfig.swift */; };
 		BDE7125D2A141E3100164F70 /* SSHAgentUserPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDE7125C2A141E3100164F70 /* SSHAgentUserPrompt.swift */; };
 		BDE7C45C29DCAEFA005E033E /* FileLocationPathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDE7C45B29DCAEFA005E033E /* FileLocationPathTests.swift */; };
+		BDE848C7924353A665389742 /* liveactivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49BA4FF4A8C380146CF6DBAD /* liveactivity.swift */; };
 		BDE84C3C2BAE335100457391 /* vim in Resources */ = {isa = PBXBuildFile; fileRef = BDE84C3B2BAE335100457391 /* vim */; };
 		BDE84C512BB233FB00457391 /* bc_ios.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = BDE84C502BB233F100457391 /* bc_ios.xcframework */; };
 		BDE84C522BB233FB00457391 /* bc_ios.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = BDE84C502BB233F100457391 /* bc_ios.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -481,6 +488,7 @@
 		D2F330DA20A7127B0074ADD7 /* open.m in Sources */ = {isa = PBXBuildFile; fileRef = D2F330D920A7127B0074ADD7 /* open.m */; };
 		D2FBEC0B27CF505D00FD974A /* browse.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2FBEC0727CF505D00FD974A /* browse.swift */; };
 		D2FCB4DD2339F9DB00A88108 /* UIScrollView+Paging.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2FCB4DC2339F9DB00A88108 /* UIScrollView+Paging.swift */; };
+		DAEE42ADBB621EEC06BB2B5B /* PathManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E566472EA570311187C36EB5 /* PathManager.swift */; };
 		FF9D45DDB1C76A8B1479A403 /* PushRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA82458DB0E808054C4BFB1B /* PushRegistrar.swift */; };
 /* End PBXBuildFile section */
 
@@ -842,8 +850,13 @@
 		07FABC1325C9AF8F00E1CC2C /* LocalFilesTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LocalFilesTests.swift; sourceTree = "<group>"; };
 		07FABC1425C9AF8F00E1CC2C /* CopyFilesTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CopyFilesTests.swift; sourceTree = "<group>"; };
 		07FABC2125C9AFC400E1CC2C /* String+Extension.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "String+Extension.swift"; sourceTree = "<group>"; };
+		0B904FE1A827770F990CE9A7 /* FleetActivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FleetActivityController.swift; path = Blink/Fleet/FleetActivityController.swift; sourceTree = SOURCE_ROOT; };
+		1B6F484497B202D9902C7DD8 /* FleetActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FleetActivityAttributes.swift; path = Blink/Fleet/FleetActivityAttributes.swift; sourceTree = SOURCE_ROOT; };
 		298C43BC9C86A768883707AD /* HeadlessSSHRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HeadlessSSHRunner.swift; path = Blink/Fleet/HeadlessSSHRunner.swift; sourceTree = SOURCE_ROOT; };
+		311C4648A219954E177F837C /* FleetScript.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FleetScript.swift; path = tools/FleetCore/Sources/FleetCore/FleetScript.swift; sourceTree = SOURCE_ROOT; };
+		36F742FBB5A70262436FFCB3 /* NotificationInbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NotificationInbox.swift; path = Blink/Fleet/NotificationInbox.swift; sourceTree = SOURCE_ROOT; };
 		3E9C41B486B94B1C5178AA29 /* PushModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PushModels.swift; path = tools/FleetCore/Sources/FleetCore/PushModels.swift; sourceTree = SOURCE_ROOT; };
+		49BA4FF4A8C380146CF6DBAD /* liveactivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = liveactivity.swift; path = Blink/Commands/liveactivity.swift; sourceTree = SOURCE_ROOT; };
 		550C417C8BDEA43D0FFEA49A /* MountManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MountManager.swift; path = tools/FleetCore/Sources/FleetCore/MountManager.swift; sourceTree = SOURCE_ROOT; };
 		563A4C6B82F6FED5F85338BB /* mounts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = mounts.swift; path = Blink/Commands/mounts.swift; sourceTree = SOURCE_ROOT; };
 		697C48E6817F4665CE9878A6 /* fleetexec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = fleetexec.swift; path = Blink/Commands/fleetexec.swift; sourceTree = SOURCE_ROOT; };
@@ -855,6 +868,7 @@
 		98271250262E4BDB00F883FA /* BlinkFileProviderExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BlinkFileProviderExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		98271258262E4BDB00F883FA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		98271259262E4BDB00F883FA /* BlinkFileProviderExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BlinkFileProviderExtension.entitlements; sourceTree = "<group>"; };
+		9CEB4798B1DCA7E955CE7C2F /* NotificationLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NotificationLog.swift; path = tools/FleetCore/Sources/FleetCore/NotificationLog.swift; sourceTree = SOURCE_ROOT; };
 		ABE948F3BADB540C3A2F0504 /* ExitTrailer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ExitTrailer.swift; path = tools/FleetCore/Sources/FleetCore/ExitTrailer.swift; sourceTree = SOURCE_ROOT; };
 		B700AED71DD0F2C200100EBF /* CloudKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CloudKit.framework; path = System/Library/Frameworks/CloudKit.framework; sourceTree = SDKROOT; };
 		B75112CB1DE4A7B10040C693 /* BKiCloudConfigurationViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BKiCloudConfigurationViewController.h; sourceTree = "<group>"; };
@@ -873,6 +887,7 @@
 		B7D4503B1DD4706000CE0DBE /* Reachability.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Reachability.m; sourceTree = "<group>"; };
 		B7D6A6271E2D43A800EDF7B0 /* BKSmartKeysConfigViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BKSmartKeysConfigViewController.h; sourceTree = "<group>"; };
 		B7D6A6281E2D43A800EDF7B0 /* BKSmartKeysConfigViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BKSmartKeysConfigViewController.m; sourceTree = "<group>"; };
+		B87A4459AAA1A9144D431E7F /* notiflog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = notiflog.swift; path = Blink/Commands/notiflog.swift; sourceTree = SOURCE_ROOT; };
 		BD028AF22A8EC509002F5F54 /* TrialSupportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrialSupportView.swift; sourceTree = "<group>"; };
 		BD1758AB26EA8C5400AEC545 /* MenuController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuController.swift; sourceTree = "<group>"; };
 		BD19DB402B056E9C003A4367 /* SSHCommandTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSHCommandTest.swift; sourceTree = "<group>"; };
@@ -1246,6 +1261,7 @@
 		D2FBEC0727CF505D00FD974A /* browse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = browse.swift; sourceTree = "<group>"; };
 		D2FCB4DC2339F9DB00A88108 /* UIScrollView+Paging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIScrollView+Paging.swift"; sourceTree = "<group>"; };
 		DA82458DB0E808054C4BFB1B /* PushRegistrar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PushRegistrar.swift; path = Blink/Fleet/PushRegistrar.swift; sourceTree = SOURCE_ROOT; };
+		E566472EA570311187C36EB5 /* PathManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PathManager.swift; path = tools/FleetCore/Sources/FleetCore/PathManager.swift; sourceTree = SOURCE_ROOT; };
 		EA0BA18B1C0CC57B00719C1A /* Blink.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Blink.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -3407,6 +3423,9 @@
 				2F014B9599FEE37ED074EFB4 /* MountManager.swift in Sources */,
 				A3EF4ACA802B1F62E5979674 /* PushModels.swift in Sources */,
 				23E148FE8ADC216F4B6FB3BF /* ExitTrailer.swift in Sources */,
+				ADDE4B2483211C267F281F81 /* NotificationLog.swift in Sources */,
+				DAEE42ADBB621EEC06BB2B5B /* PathManager.swift in Sources */,
+				45B249539BB2823BC38AA435 /* FleetScript.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3696,6 +3715,11 @@
 				A12D430E83AF3E532A02D536 /* FleetIntents.swift in Sources */,
 				FF9D45DDB1C76A8B1479A403 /* PushRegistrar.swift in Sources */,
 				084D4A78A7677D2E5F548AAF /* fleetexec.swift in Sources */,
+				11DE4E97AD77A47E258C9685 /* NotificationInbox.swift in Sources */,
+				28634BA48A4F86F0917FD27C /* notiflog.swift in Sources */,
+				4BF54BEFB4F1587925A69EBD /* FleetActivityAttributes.swift in Sources */,
+				52304E32B9D950805DDD4DEC /* FleetActivityController.swift in Sources */,
+				BDE848C7924353A665389742 /* liveactivity.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

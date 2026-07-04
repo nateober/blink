@@ -28,3 +28,16 @@ def test_requires_token():
 def test_session_included_when_given():
     r = run(["--token", "t", "--title", "T", "--session", "s9", "--dry-run"])
     assert json.loads(r.stdout)["blink"]["session"] == "s9"
+
+def test_payload_sets_content_available_for_background_wake():
+    r = run(["--token", "abc", "--title", "T", "--dry-run"])
+    assert json.loads(r.stdout)["aps"]["content-available"] == 1
+
+def test_live_activity_update_payload():
+    r = run(["--token", "abc", "--live-activity-event", "update",
+             "--la-status", "needs input", "--la-detail", "on ada", "--dry-run"])
+    assert r.returncode == 0, r.stderr
+    aps = json.loads(r.stdout)["aps"]
+    assert aps["event"] == "update"
+    assert aps["content-state"]["status"] == "needs input"
+    assert aps["content-state"]["detail"] == "on ada"

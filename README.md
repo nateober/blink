@@ -1,4 +1,38 @@
 # Blink Shell for iOS
+
+> ## ⚡ Fleet-native fork (personal)
+>
+> This is a **personal fork** of [blinksh/blink](https://github.com/blinksh/blink), not affiliated
+> with or endorsed by Blink Shell. It is built for personal use and distributed only via TestFlight
+> (bundle id `com.obercode.blink`); it is **not** published to the App Store. Like upstream, it is
+> licensed **GPL-3.0** — all changes here are offered under the same license, and full credit for
+> Blink itself goes to the upstream authors.
+>
+> ### What this fork adds — "fleet-native" Blink
+> Built for driving a personal mesh of Macs (Tailscale) from an iPhone:
+>
+> - **Run commands & scripts on a fleet host from a Shortcut / Siri** — App Intents
+>   `Run Fleet Command` and `Run Fleet Script` (multi-line bash/sh/zsh/python3), and the terminal
+>   twin `fleetexec <host> <cmd>`. Headless SSH (`HeadlessSSHRunner`) reusing Blink's saved hosts,
+>   keys, and agent; real stdout/stderr + exit codes returned to Shortcuts.
+> - **Push notifications + a notification inbox** — APNs registration, a fleet sender
+>   (`scripts/fleet/blink_notify.py`), and a `notiflog` command that persists received pushes so
+>   their text survives the tap (with background `content-available` capture).
+> - **Mountable iCloud/Files folders** — `pickFolder` / `bookmark` / `showmarks` / `jump` /
+>   `renamemark` / `deletemark` link a picked folder into `~` (via Blink's BookmarkedLocations,
+>   sandbox-registered so it's navigable).
+> - **`$PATH` inclusion** — `addpath` / `rmpath` / `showpath` put a folder's scripts on `$PATH`.
+> - **Live Activity** (lock screen / Dynamic Island) for a running fleet session — app-side +
+>   widget code; see `docs/LIVE-ACTIVITY-SETUP.md`.
+>
+> Design specs, plans, and a code-review record live under `docs/`; build/release notes and the
+> canonical project status are in [`handoff.md`](handoff.md). Pure, testable logic lives in
+> `tools/FleetCore` (`swift test`).
+>
+> *Everything below this line is the upstream Blink README, unchanged.*
+
+---
+
 Do Blink! [Blink](https://blink.sh) is the first professional, desktop-grade terminal for iOS that leverages the support of Mosh and SSH. Thus, we can unequivocally guarantee stable connections, lightning-fast speeds, and full configurations. It can and should be your all-day-long tool.
 
 We did not create another terminal to fix your website on the go. Blink was built as a professional grade product from the onset. We started by analyzing what the must-haves were and we ended up grounding Blink on these three concepts:

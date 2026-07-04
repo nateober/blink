@@ -128,10 +128,45 @@
 		<string></string>
 		<string>no</string>
 	</array>
+	<key>addpath</key>
+	<array>
+		<string>MAIN</string>
+		<string>addpath_main</string>
+		<string></string>
+		<string>no</string>
+	</array>
 	<key>fleetexec</key>
 	<array>
 		<string>MAIN</string>
 		<string>fleetexec_main</string>
+		<string></string>
+		<string>no</string>
+	</array>
+	<key>liveactivity</key>
+	<array>
+		<string>MAIN</string>
+		<string>liveactivity_main</string>
+		<string></string>
+		<string>no</string>
+	</array>
+	<key>rmpath</key>
+	<array>
+		<string>MAIN</string>
+		<string>rmpath_main</string>
+		<string></string>
+		<string>no</string>
+	</array>
+	<key>showpath</key>
+	<array>
+		<string>MAIN</string>
+		<string>showpath_main</string>
+		<string></string>
+		<string>no</string>
+	</array>
+	<key>notiflog</key>
+	<array>
+		<string>MAIN</string>
+		<string>notiflog_main</string>
 		<string></string>
 		<string>no</string>
 	</array>

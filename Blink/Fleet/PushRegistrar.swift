@@ -40,7 +40,11 @@ import BlinkConfig
   @objc public func handleTokenData(_ deviceToken: Data) {
     let hex = deviceToken.map { String(format: "%02x", $0) }.joined()
     tokenStore.save(hex: hex)
-    NSLog("[blink-notify] APNs device token: %@", hex)
+    // The device token is half the secret needed to push to this device — don't log it in
+    // full to the unified log (readable via Console / sysdiagnose). Prefix only, Debug only.
+    #if DEBUG
+    NSLog("[blink-notify] APNs device token (prefix): %@…", String(hex.prefix(8)))
+    #endif
     publishBestEffort(hex: hex)
   }
 
@@ -52,6 +56,9 @@ import BlinkConfig
   private func publishBestEffort(hex: String) {
     let candidates = ["push-notify", "ada"]
     guard let alias = candidates.first(where: { BKHosts.withHost($0) != nil }) else { return }
+    // Defense in depth: hex is built from raw token bytes (always [0-9a-f]), but guard
+    // locally so the value interpolated into the remote shell command can't ever inject.
+    guard !hex.isEmpty, hex.allSatisfy(\.isHexDigit) else { return }
     let cmd = "mkdir -p ~/.blink-notify && printf '%s' '\(hex)' > ~/.blink-notify/token"
     Task {
       do {

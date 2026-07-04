@@ -12,7 +12,7 @@ delivers it to APNs over HTTP/2 using a provider .p8 auth key.
 
 --dry-run prints the payload JSON and exits (no deps needed) — used by tests.
 """
-import argparse, json, sys, time
+import argparse, json, re, sys, time
 
 APNS_HOST = "https://api.push.apple.com"  # production; use api.sandbox.push.apple.com for dev builds
 
@@ -22,9 +22,28 @@ def build_payload(args):
     if args.session: blink["session"] = args.session
     alert = {"title": args.title}
     if args.body: alert["body"] = args.body
-    return {"aps": {"alert": alert, "sound": "default"}, "blink": blink}
+    # content-available wakes a backgrounded/suspended app so it can record the push to its
+    # inbox even before the user taps the banner (didReceiveRemoteNotification). A force-quit
+    # app still won't wake — iOS doesn't deliver background pushes to terminated apps.
+    return {"aps": {"alert": alert, "sound": "default", "content-available": 1}, "blink": blink}
 
-def send(args, payload):
+def build_la_payload(args):
+    # Live Activity update/end. Targets the per-activity token (~/.blink-notify/activity-token),
+    # NOT the device token. content-state keys mirror FleetActivityAttributes.ContentState.
+    aps = {
+        "timestamp": int(time.time()),
+        "event": args.live_activity_event,  # "update" | "end"
+        "content-state": {
+            "status": args.la_status,
+            "detail": args.la_detail,
+            "updatedAt": int(time.time()),
+        },
+    }
+    if args.live_activity_event == "end":
+        aps["dismissal-date"] = int(time.time())
+    return {"aps": aps}
+
+def send(args, payload, push_type="alert"):
     # Lazy imports so --dry-run needs no third-party deps.
     import jwt, httpx
     with open(args.p8) as f:
@@ -34,10 +53,12 @@ def send(args, payload):
         key, algorithm="ES256", headers={"kid": args.key_id},
     )
     url = f"{args.host_base}/3/device/{args.token}"
+    # Live Activity pushes use a dedicated topic suffix and push type.
+    topic = f"{args.topic}.push-type.liveactivity" if push_type == "liveactivity" else args.topic
     headers = {
         "authorization": f"bearer {token}",
-        "apns-topic": args.topic,
-        "apns-push-type": "alert",
+        "apns-topic": topic,
+        "apns-push-type": push_type,
         "apns-priority": "10",
     }
     with httpx.Client(http2=True, timeout=15) as client:
@@ -47,8 +68,8 @@ def send(args, payload):
 
 def main():
     ap = argparse.ArgumentParser(prog="blink_notify")
-    ap.add_argument("--token", required=True, help="APNs device token (hex)")
-    ap.add_argument("--title", required=True)
+    ap.add_argument("--token", required=True, help="APNs device token (hex); for --live-activity-event, the activity token")
+    ap.add_argument("--title", default="")
     ap.add_argument("--body", default="")
     ap.add_argument("--kind", default="needs_input", choices=["needs_input", "done", "progress"])
     ap.add_argument("--host", default="")
@@ -58,18 +79,27 @@ def main():
     ap.add_argument("--topic", default="com.obercode.blink")
     ap.add_argument("--p8", default="")
     ap.add_argument("--sandbox", action="store_true", help="use APNs sandbox host")
+    # Live Activity update/end (targets the activity token, not the device token).
+    ap.add_argument("--live-activity-event", dest="live_activity_event", choices=["update", "end"])
+    ap.add_argument("--la-status", dest="la_status", default="running")
+    ap.add_argument("--la-detail", dest="la_detail", default="")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
     args.host_base = "https://api.sandbox.push.apple.com" if args.sandbox else APNS_HOST
 
-    payload = build_payload(args)
+    is_la = args.live_activity_event is not None
+    payload = build_la_payload(args) if is_la else build_payload(args)
     if args.dry_run:
         print(json.dumps(payload))
         return 0
+    if not is_la and not args.title:
+        ap.error("--title is required for an alert push (or pass --live-activity-event)")
+    if not re.fullmatch(r"[0-9a-fA-F]{4,}", args.token):
+        ap.error("--token must be a hex APNs device token")
     missing = [n for n in ("key_id", "team_id", "p8") if not getattr(args, n)]
     if missing:
         ap.error("send requires --key-id, --team-id, --p8 (or use --dry-run): missing " + ",".join(missing))
-    return send(args, payload)
+    return send(args, payload, push_type="liveactivity" if is_la else "alert")
 
 if __name__ == "__main__":
     sys.exit(main())

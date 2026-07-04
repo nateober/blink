@@ -39,7 +39,13 @@ public enum HeadlessSSHError: Error, LocalizedError {
 /// "operation couldn't be completed (SSH.SSHError error N.)". Reach for its real
 /// `.description` ("Could not authenticate. Tried …", "Connection Error: …") instead.
 private func describeSSH(_ error: Error) -> String {
-  if let e = error as? SSHError { return e.description }
+  if let e = error as? SSHError {
+    if case .authFailed = e {
+      // Headless runs can't prompt for a key passphrase; make that actionable.
+      return e.description + " — if the host's key is passphrase-protected, headless runs can't unlock it; add a passphrase-free fleet key or set the host's password."
+    }
+    return e.description
+  }
   if let e = error as? LocalizedError, let d = e.errorDescription { return d }
   return "\(error)"
 }
@@ -83,9 +89,17 @@ public enum HeadlessSSHRunner {
     if let pw = pw, !pw.isEmpty { authMethods.append(AuthPassword(with: pw)) }
     authMethods.append(AuthKeyboardInteractive(requestAnswers: answer, wrongRetriesAllowed: 1))
 
-    // Owner running against their own fleet: trust on first use (host may not be in known_hosts).
-    let verify: SSHClientConfig.RequestVerifyHostCallback? = { _ in
-      Just(acceptUnknownHostKeys ? InteractiveResponse.affirmative : InteractiveResponse.negative)
+    // Pin-on-first-use, then strict. A host already in known_hosts never reaches this
+    // callback. Accept a genuinely NEW host (unknown/notFound) only when opted in — but
+    // ALWAYS reject a CHANGED key: that is the active-MITM signature, and accepting it would
+    // also silently overwrite the stored pin. Matters on the hostile WiFi a travel device sees.
+    let verify: SSHClientConfig.RequestVerifyHostCallback? = { prompt in
+      let accept: Bool
+      switch prompt {
+      case .unknown, .notFound: accept = acceptUnknownHostKeys
+      case .changed:            accept = false
+      }
+      return Just(accept ? InteractiveResponse.affirmative : InteractiveResponse.negative)
         .setFailureType(to: Error.self).eraseToAnyPublisher()
     }
 
@@ -122,12 +136,17 @@ public enum HeadlessSSHRunner {
         var finished = false
         let cf = CFRunLoopGetCurrent()
 
+        // `finished` is touched only on THIS dedicated thread: the deadline Timer fires on
+        // this thread's run loop, and the Combine sink completes on `rloop` (which SSHClient
+        // captured as this same thread's run loop). So no lock is needed. WakeUp after Stop is
+        // belt-and-suspenders in case a completion lands in the gap before CFRunLoopRun starts.
         func finish(_ resume: () -> Void) {
           if finished { return }
           finished = true
           resume()
           cancellable?.cancel()
           CFRunLoopStop(cf)
+          CFRunLoopWakeUp(cf)
         }
 
         cancellable = SSHClient.dial(host, with: config)

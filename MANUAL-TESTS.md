@@ -50,6 +50,15 @@ Each item names the TestFlight build it first shipped in.
       The exit-code/stderr parse logic IS covered by `swift test --package-path tools/FleetCore`
       (ExitTrailerTests, 7 cases, Mac-native).
 
+## Feature D — Notification inbox (build 1109)
+- [x] Received pushes are persisted and listable with the `notiflog` command (tapping a banner
+      no longer loses the text). `notiflog clear` empties it. **Sim-verified 2026-05-29:** two
+      `simctl push`es → `notiflog` lists both newest-first with `[kind host]` tags, title + body;
+      `clear` → "No notifications yet." Recorded on both foreground-present and tap.
+      Store: `FleetCore/NotificationLog` (6 tests); receipt hook in `AppDelegate.m` via the
+      `@objc NotificationInbox` shim. **On-device:** send yourself a push, tap it, run `notiflog`.
+      (Known gap: a push delivered while the app is fully killed is recorded only when tapped.)
+
 ## Feature C — Push notifications
 - [ ] 🔒 APNs auth key (.p8) generated in the portal and stored via op-add.
 - [ ] 🔒 Push capability enabled on App ID `com.obercode.blink` (if not auto-added during signing).

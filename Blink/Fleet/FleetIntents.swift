@@ -82,6 +82,60 @@ struct RunFleetCommandIntent: AppIntent {
 }
 
 @available(iOS 16.0, *)
+enum FleetInterpreter: String, AppEnum {
+  case bash, sh, zsh, python3
+
+  static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "Interpreter")
+  static var caseDisplayRepresentations: [FleetInterpreter: DisplayRepresentation] = [
+    .bash: "bash", .sh: "sh", .zsh: "zsh", .python3: "python3"
+  ]
+}
+
+@available(iOS 16.0, *)
+struct RunFleetScriptIntent: AppIntent {
+  static var title: LocalizedStringResource = "Run Fleet Script"
+  static var description = IntentDescription(
+    "Run a multi-line bash/python script on a configured Blink host over SSH and return its output."
+  )
+  static var openAppWhenRun: Bool = false
+
+  @Parameter(title: "Host", description: "A host configured in Blink (e.g. ada).")
+  var host: String
+
+  @Parameter(title: "Interpreter", description: "Interpreter to run the script with.", default: .bash)
+  var interpreter: FleetInterpreter
+
+  @Parameter(title: "Script", description: "The script to run.",
+             inputOptions: String.IntentInputOptions(multiline: true))
+  var script: String
+
+  static var parameterSummary: some ParameterSummary {
+    Summary("Run a \(\.$interpreter) script on \(\.$host)")
+  }
+
+  @MainActor
+  func perform() async throws -> some IntentResult & ReturnsValue<String> {
+    guard BKHosts.withHost(host) != nil else { throw FleetIntentError.unknownHost(host) }
+    // The script is base64-encoded into a single-line pipeline (see FleetScript) so any
+    // content runs verbatim with no escaping/injection.
+    let command = FleetScript.command(script: script, interpreter: interpreter.rawValue)
+    do {
+      let result = try await HeadlessSSHRunner.run(alias: host, command: command, acceptUnknownHostKeys: true)
+      if let code = result.exitCode, code != 0 {
+        let detail = result.stderr.isEmpty ? result.stdout : result.stderr
+        let trimmed = detail.trimmingCharacters(in: .whitespacesAndNewlines)
+        throw FleetIntentError.runFailed("script exited \(code)" + (trimmed.isEmpty ? "" : ": \(trimmed)"))
+      }
+      return .result(value: result.stdout.isEmpty ? "(no output)" : result.stdout)
+    } catch let e as FleetIntentError {
+      throw e
+    } catch {
+      throw FleetIntentError.runFailed((error as? LocalizedError)?.errorDescription ?? "\(error)")
+    }
+  }
+}
+
+@available(iOS 16.0, *)
 struct BlinkFleetShortcuts: AppShortcutsProvider {
   static var appShortcuts: [AppShortcut] {
     AppShortcut(
@@ -92,6 +146,15 @@ struct BlinkFleetShortcuts: AppShortcutsProvider {
       ],
       shortTitle: "Run Fleet Command",
       systemImageName: "terminal"
+    )
+    AppShortcut(
+      intent: RunFleetScriptIntent(),
+      phrases: [
+        "Run a script on a host with \(.applicationName)",
+        "Run a fleet script with \(.applicationName)"
+      ],
+      shortTitle: "Run Fleet Script",
+      systemImageName: "scroll"
     )
   }
 }

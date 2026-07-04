@@ -102,6 +102,7 @@ void __setupProcessEnv(void) {
     addCommandList([[NSBundle mainBundle] pathForResource:@"blinkCommandsDictionary" ofType:@"plist"]); // Load blink commands to ios_system
     __setupProcessEnv(); // we should call this after ios_system initializeEnvironment to override its defaults.
     [AppDelegate _loadProfileVars];
+    [FleetPath apply]; // fleet-native: re-apply persisted addpath folders onto $PATH
   });
   
   NSString *homePath = BlinkPaths.homePath;
@@ -196,8 +197,11 @@ void __setupProcessEnv(void) {
 }
 
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler {
+  // fleet-native: a content-available push wakes us in the background — record it to the
+  // inbox now, so the text is in `notiflog` even if the banner is never tapped.
+  [[NotificationInbox shared] recordRemoteWithUserInfo:userInfo];
   [[BKiCloudSyncHandler sharedHandler]checkForReachabilityAndSync:nil];
-  // TODO: pass completion handler.
+  completionHandler(UIBackgroundFetchResultNewData);
 }
 
 // fleet-native: APNs device-token callbacks → PushRegistrar.
@@ -372,17 +376,24 @@ configurationForConnectingSceneSession:(UISceneSession *)connectingSceneSession
 #pragma mark - UNUserNotificationCenterDelegate
 
 - (void)userNotificationCenter:(UNUserNotificationCenter *)center willPresentNotification:(UNNotification *)notification withCompletionHandler:(void (^)(UNNotificationPresentationOptions))completionHandler {
+  // fleet-native: record so the push text survives (see the `notiflog` command).
+  UNNotificationContent *content = notification.request.content;
+  [[NotificationInbox shared] recordWithTitle:content.title body:content.body userInfo:content.userInfo];
   UNNotificationPresentationOptions opts = UNNotificationPresentationOptionSound | UNNotificationPresentationOptionList | UNNotificationPresentationOptionBanner | UNNotificationPresentationOptionBadge;
   completionHandler(opts);
 }
 
 - (void)userNotificationCenter:(UNUserNotificationCenter *)center didReceiveNotificationResponse:(UNNotificationResponse *)response withCompletionHandler:(void (^)(void))completionHandler {
+  // fleet-native: tapping clears the banner, so persist the text first (see `notiflog`).
+  UNNotificationContent *content = response.notification.request.content;
+  [[NotificationInbox shared] recordWithTitle:content.title body:content.body userInfo:content.userInfo];
+
   SceneDelegate *sceneDelegate = (SceneDelegate *)response.targetScene.delegate;
-  
+
   SpaceController *ctrl = sceneDelegate.spaceController;
-  
+
   [ctrl moveToShellWithKey:response.notification.request.content.threadIdentifier];
-  
+
   completionHandler();
 }
 
