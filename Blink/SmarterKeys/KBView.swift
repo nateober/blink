@@ -346,6 +346,20 @@ extension KBView: UIScrollViewDelegate {
 }
 
 extension KBView: KBKeyViewDelegate {
+  // Sequence the tmux menu key sends. Defaults to backtick + space (tmux
+  // prefix + Space with the tm-applied config). Override without a rebuild by
+  // writing hex bytes to <blink home>/tmux_key, e.g. `echo 6020 > ~/tmux_key`
+  // from inside Blink. Read per-tap so edits apply immediately.
+  static func _tmuxMenuHex() -> String {
+    let fallback = "6020"
+    guard let url = BlinkPaths.blinkURL()?.appendingPathComponent("tmux_key"),
+          let raw = try? String(contentsOf: url, encoding: .utf8)
+    else { return fallback }
+    let hex = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    let isHex = !hex.isEmpty && hex.count % 2 == 0 && hex.allSatisfy(\.isHexDigit)
+    return isHex ? hex : fallback
+  }
+
   
   func keyViewAskedToCancelScroll(keyView: KBKeyView) {
     _scrollView.panGestureRecognizer.dropTouches()
@@ -447,7 +461,7 @@ extension KBView: KBKeyViewDelegate {
     // tmux action menu key: emit backtick + space (tmux prefix + Space) as raw
     // bytes, the same path Custom Presses use, so tmux opens its display-menu.
     if case .tmuxMenu = value {
-      keyInput.reportHex("6020")
+      keyInput.reportHex(Self._tmuxMenuHex())
       return
     }
 
