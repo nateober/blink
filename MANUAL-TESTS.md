@@ -67,6 +67,21 @@ Each item names the TestFlight build it first shipped in.
 - [ ] Live Activity renders for a long-running `claude -p` session.
 - [ ] 🔒 `blink_notify` wired into the `claude -p` wrapper on "needs input".
 
+## Feature E — Dictation SmartKey (build 1120)
+- [ ] The mic key renders in the SmartKeys bar (right of the tmux hamburger) in portrait and
+      landscape without crowding the bar.
+- [ ] First press asks for Microphone, then Speech Recognition; the strip then says to tap again
+      (that press records nothing — by design, the alerts cancel the press).
+- [ ] Tap: strip shows `Listening 0:0n`, the red dot and a moving level bar; partial words appear
+      while speaking; tap again → the words are typed at the cursor, no Return sent.
+- [ ] Hold ≥ 0.35 s and release: same, stops on release.
+- [ ] In a tmux session running Claude Code: dictate a prompt, press Return, it runs.
+- [ ] Curly apostrophes / unicode from the recognizer arrive intact (e.g. "don't").
+- [ ] iOS 26 first run: if the SpeechAnalyzer model isn't installed, the first dictation uses the
+      older recognizer and the model downloads for next time (check a second dictation later).
+- [ ] Backgrounding mid-dictation (swipe up) ends it with what was heard; an incoming call too.
+- [ ] Deny Speech in Settings → the strip explains and the mic stays shut.
+
 ## Build numbers (TestFlight internal group)
 - 1101 — Phase 1 (mountable iCloud folders)
 - 1102 — Phase 2 (App Intents / Shortcuts)
@@ -89,3 +104,5 @@ Each item names the TestFlight build it first shipped in.
 - Test on the latest (1108). On-device: host HostName already set to Tailscale IP (ada →
   100.64.0.3). Run `fleetexec ada uptime` in the terminal (fastest) or the Shortcut — should
   return output now. If it still errors, the message is now a readable SSH reason — capture it.
+- 1120 — dictation SmartKey (branch `feat/voice-key`, off `raw`; not merged). Sim-verified key +
+         permission flow + listening strip; transcription/insertion = device.

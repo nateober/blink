@@ -9,25 +9,29 @@ Nate's personal fork of [blinksh/blink](https://github.com/blinksh/blink) (GPL-3
 made "fleet-native" for driving his Tailscale-meshed Macs from an iPhone. **TestFlight-only, never
 App Store** (GPL code he doesn't own + App-Store-terms conflict + "Blink" trademark).
 
-## Current state (2026-05-30)
-- **Build 1114** live in TestFlight internal. Branch **`feat/notification-inbox`**; **PR #1 merged**
-  to `raw`, **PR #2 open** with all post-merge work.
+## Current state (2026-10-10)
+- **Build 1120** (dictation SmartKey) uploading to TestFlight internal from branch **`feat/voice-key`**
+  (off `raw`, not merged). PRs #1–#3 are merged; `raw` is the baseline. `feat/tmux-key-config`
+  (iPad tmux key + file-configurable sequence) is still unreleased.
 - Shipped: iCloud-folder mounts (linked into `~/<name>`), `Run Fleet Command` + `Run Fleet Script`
-  App Intents + the `fleetexec` terminal twin, push + `notiflog` inbox, `$PATH` inclusion. Live
-  Activity app-side ships but is dormant until the widget target exists.
+  App Intents + the `fleetexec` terminal twin, push + `notiflog` inbox, `$PATH` inclusion, the tmux
+  menu SmartKey, and (1120) the dictation SmartKey (on-device speech, live strip, typed at the
+  cursor). Live Activity app-side ships but is dormant until the widget target exists.
 
 ## Open items — these need NATE (surface them at the start of a fresh session)
 1. **Add the Live Activity widget-extension target in Xcode** → `docs/LIVE-ACTIVITY-SETUP.md`. Until
    then the lock-screen / Dynamic Island indicator can't render.
-2. **Merge PR #2** (`feat/notification-inbox` → `raw`) when satisfied.
+2. **Device-accept build 1120's dictation key** (MANUAL-TESTS § Feature E), then merge
+   `feat/voice-key` → `raw` (and decide whether `feat/tmux-key-config` ships).
 3. **On-device acceptance** (sim can't cover these): iCloud-folder linking into `~`, `addpath` →
    `$PATH` membership, `Run Fleet Script`, real-APNs push. Checklist: `MANUAL-TESTS.md`.
 
 ## Working here
 ```bash
-git checkout feat/notification-inbox          # ongoing branch (NOT feat/fleet-native)
-swift test --package-path tools/FleetCore     # 42 tests = pure-logic verification path
-# build for sim: XcodeBuildMCP build_sim (or -destination 'platform=iOS Simulator,name=iPhone 17')
+git checkout feat/voice-key                   # current branch (dictation key); raw = baseline
+swift test --package-path tools/FleetCore     # 51 tests = pure-logic verification path
+# build for sim: xcodebuild ... -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' ENABLE_DEBUG_DYLIB=NO
+#   (keep code signing ON: CODE_SIGNING_ALLOWED=NO drops the app-group entitlement → crash in Migrator at launch)
 # ship a TestFlight build: scripts/release.sh  (detached, ~15 min; auto-bumps build #)
 # add a new source file to the Xcode target: tools/add_to_target.py <file> <Target>
 ```
