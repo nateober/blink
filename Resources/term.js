@@ -425,13 +425,18 @@ function blink_findUrls(rows, width, strWidth) {
 function _blinkScreenLinks() {
   var top = t.scrollPort_.getTopRowIndex();
   var count = t.scrollPort_.visibleRowCount;
+  var total = t.getRowCount();
   var rows = [];
-  for (var i = 0; i < count; i++) {
-    var node = t.getRowNode(top + i);
-    rows.push({
-      text: node ? node.textContent : '',
-      wrapped: !!(node && node.getAttribute && node.getAttribute('line-overflow')),
-    });
+  for (var i = 0; i < count && top + i < total; i++) {
+    // Rows are the terminal's own objects, not page elements: their text comes from
+    // getRowsText, which also leaves out the line break after a row that wrapped.
+    var text = t.getRowsText(top + i, top + i + 1);
+    var wrapped = false;
+    if (top + i + 1 < total) {
+      var next = t.getRowsText(top + i + 1, top + i + 2);
+      wrapped = t.getRowsText(top + i, top + i + 2).length === text.length + next.length;
+    }
+    rows.push({text: text, wrapped: wrapped});
   }
   return {rows: rows, links: blink_findUrls(rows, t.screenSize.width, lib.wc.strWidth)};
 }
@@ -450,6 +455,7 @@ function term_visibleUrls() {
     found.forEach(function (f) { if (!seen[f.url]) { seen[f.url] = true; urls.push(f.url); } });
     return urls;
   } catch (e) {
+    console.log('term_visibleUrls failed: ' + e);
     return [];
   }
 }

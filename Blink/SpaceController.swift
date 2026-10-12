@@ -908,6 +908,7 @@ extension SpaceController {
     case .clipboardCopy: KBTracker.shared.input?.copy(self)
     case .clipboardCopyRaw: KBTracker.shared.input?.copyRaw(self)
     case .clipboardPaste: KBTracker.shared.input?.paste(self)
+    case .clipboardSelectAll: KBTracker.shared.input?.selectAll(self)
     case .selectionGoogle: KBTracker.shared.input?.googleSelection(self)
     case .selectionStackOverflow: KBTracker.shared.input?.soSelection(self)
     case .selectionShare: KBTracker.shared.input?.shareSelection(self)
