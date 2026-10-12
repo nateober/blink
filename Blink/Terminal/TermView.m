@@ -454,6 +454,12 @@ struct winsize __winSizeFromJSON(NSDictionary *json) {
   }];
 }
 
+- (void)refreshLayoutInsets
+{
+  [self.constraintManager refresh];
+  [self setNeedsLayout];
+}
+
 - (void)selectAllText
 {
   [_webView evaluateJavaScript:term_selectAll() completionHandler:nil];

@@ -116,6 +116,20 @@
     [NSLayoutConstraint activateConstraints:constraintsToActivate];
 }
 
+static CGFloat __reservedTop = 0;
+
++ (CGFloat)reservedTop {
+    return __reservedTop;
+}
+
++ (void)setReservedTop:(CGFloat)reservedTop {
+    __reservedTop = reservedTop;
+}
+
+- (void)refresh {
+    [self updateConstraintsForCurrentState];
+}
+
 - (void)updateLayoutMode:(BKLayoutMode)mode {
     if (self.isLayoutLocked) return; // Don't update if locked
     
@@ -143,6 +157,12 @@
     }
     
     UIEdgeInsets insets = [self calculateInsetsForLayoutMode:self.currentLayoutMode];
+
+    // The sessions bar lives in the device's own window only.
+    UIWindow *window = self.managedView.window;
+    if (window && window != ShadowWindow.shared && window.screen == UIScreen.mainScreen) {
+        insets.top = MAX(insets.top, __reservedTop);
+    }
     
     self.topConstraint.constant = insets.top;
     self.leadingConstraint.constant = insets.left;

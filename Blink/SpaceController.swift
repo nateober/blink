@@ -101,7 +101,71 @@ class SpaceController: UIViewController {
       if !canDisplayHUD {
         _hud?.hide(animated: false)
       }
+      _updateTabStrip()
     }
+  }
+
+  // The optional sessions bar across the top (Settings > Display).
+  private var _tabStrip: TabStripView?
+  private var _tabStripTimer: Timer?
+  private var _tabStripReservedTop: CGFloat = -1
+
+  /// Shows, hides and refreshes the sessions bar, and keeps terminals clear of it.
+  private func _updateTabStrip() {
+    let isMainWindow = view.window != nil && view.window != ShadowWindow.shared
+      && view.window?.screen == UIScreen.main
+    let visible = isMainWindow && TabStripRules.isVisible(
+      enabled: TabStripView.isEnabled,
+      sessions: _viewportsKeys.count,
+      snipsInputActive: !canDisplayHUD)
+
+    if visible {
+      let strip: TabStripView
+      if let existing = _tabStrip {
+        strip = existing
+      } else {
+        strip = TabStripView(frame: .zero)
+        strip.onSelect = { [weak self] idx in self?._moveToShell(idx: idx) }
+        view.addSubview(strip)
+        _tabStrip = strip
+        // Titles change without telling anyone (the shell sets them), so look now and then.
+        _tabStripTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
+          self?._refreshTabStripLabels()
+        }
+      }
+      let top = view.safeAreaInsets.top
+      strip.frame = CGRect(x: 0, y: top, width: view.bounds.width, height: CGFloat(TabStripRules.height))
+      view.bringSubviewToFront(strip)
+      _refreshTabStripLabels()
+    } else if let strip = _tabStrip {
+      strip.removeFromSuperview()
+      _tabStrip = nil
+      _tabStripTimer?.invalidate()
+      _tabStripTimer = nil
+    }
+
+    guard isMainWindow else { return }
+    let reserved = CGFloat(TabStripRules.reservedTop(visible: visible, safeAreaTop: Double(view.safeAreaInsets.top)))
+    if reserved != _tabStripReservedTop || LayoutConstraintManager.reservedTop != reserved {
+      _tabStripReservedTop = reserved
+      LayoutConstraintManager.reservedTop = reserved
+      forEachActive { term in
+        if term.viewIsLoaded {
+          term.termDevice.view?.refreshLayoutInsets()
+        }
+      }
+    }
+  }
+
+  private func _refreshTabStripLabels() {
+    guard let strip = _tabStrip else { return }
+    var labels: [String] = []
+    for (index, key) in _viewportsKeys.enumerated() {
+      let term: TermController? = SessionRegistry.shared.sessionFromIndexWith(key: key)
+      labels.append(TabStripRules.label(title: term?.title, index: index))
+    }
+    let selected = _currentKey.flatMap { _viewportsKeys.firstIndex(of: $0) } ?? -1
+    strip.update(labels: labels, selected: selected)
   }
 
   private var canSwitchPages: Bool = true {
@@ -140,6 +204,7 @@ class SpaceController: UIViewController {
     }
     
     _snippetsVC?.view.frame = _overlay.frame
+    _updateTabStrip()
     
     if let menu = _blinkMenu {
       let size = _overlay.frame.size;
@@ -271,6 +336,7 @@ class SpaceController: UIViewController {
       overrideUserInterfaceStyle = .unspecified
     }
     _applyAppearanceTheme()
+    _updateTabStrip()
   }
 
   public override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
@@ -579,6 +645,8 @@ Please go to your subscriptions and cancel one of them!
     _hud?.hide(animated: false)
 
     // Check capability flag instead of mode directly
+    _updateTabStrip()
+
     guard canDisplayHUD else {
       return
     }

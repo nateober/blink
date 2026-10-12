@@ -46,6 +46,13 @@ NS_ASSUME_NONNULL_BEGIN
 
 + (BKLayoutMode) deviceDefaultLayoutMode;
 
+// Space kept free at the top of the window (for the sessions bar): terminals start at or
+// below this y in every layout mode. Zero when nothing is reserved.
+@property (class, nonatomic) CGFloat reservedTop;
+
+// Re-reads insets and the reserved top.
+- (void)refresh;
+
 // Update layout mode
 - (void)updateLayoutMode:(BKLayoutMode)mode;
 

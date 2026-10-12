@@ -84,6 +84,7 @@
 		45B249539BB2823BC38AA435 /* FleetScript.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311C4648A219954E177F837C /* FleetScript.swift */; };
 		4BF54BEFB4F1587925A69EBD /* FleetActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B6F484497B202D9902C7DD8 /* FleetActivityAttributes.swift */; };
 		52304E32B9D950805DDD4DEC /* FleetActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B904FE1A827770F990CE9A7 /* FleetActivityController.swift */; };
+		618A44019CF0250DA3A16A55 /* TabStripRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F9E40248747F975ACDA02A8 /* TabStripRules.swift */; };
 		68124C808D8B2957AEEFBEC1 /* VoiceDictation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DB44577BCD8A380453D9775 /* VoiceDictation.swift */; };
 		803B99D72582869200DC99C8 /* BKNotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 803B99D62582869200DC99C8 /* BKNotificationsView.swift */; };
 		803B99E3258381B200DC99C8 /* SettingsHostingController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 803B99E2258381B200DC99C8 /* SettingsHostingController.swift */; };
@@ -91,6 +92,7 @@
 		85A34309200A8FAF009324F1 /* term.css in Resources */ = {isa = PBXBuildFile; fileRef = 85A34308200A8FAF009324F1 /* term.css */; };
 		866C4B61AA42D3523D88BFCE /* SessionLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21F847D3B17F3ECC31DEAC2B /* SessionLink.swift */; };
 		8AFC40AB851C8DE5EDB7B3B2 /* AppearanceRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3973437ABB116776FF5FF6A0 /* AppearanceRules.swift */; };
+		92F540AE9F20977B4DB133FA /* TabStripView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E054A09A32F00207C78D5E1 /* TabStripView.swift */; };
 		9827126B262E4BDB00F883FA /* BlinkFileProviderExtension.appex in Embed PlugIns */ = {isa = PBXBuildFile; fileRef = 98271250262E4BDB00F883FA /* BlinkFileProviderExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A07E439AA1EE99BBCCEB7C16 /* VoiceRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E354EEAA61AE943A07768C9 /* VoiceRules.swift */; };
 		A12D430E83AF3E532A02D536 /* FleetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCD14596A11D1B5F0CC59170 /* FleetIntents.swift */; };
@@ -876,11 +878,13 @@
 		563A4C6B82F6FED5F85338BB /* mounts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = mounts.swift; path = Blink/Commands/mounts.swift; sourceTree = SOURCE_ROOT; };
 		5E354EEAA61AE943A07768C9 /* VoiceRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceRules.swift; path = tools/FleetCore/Sources/FleetCore/VoiceRules.swift; sourceTree = SOURCE_ROOT; };
 		697C48E6817F4665CE9878A6 /* fleetexec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = fleetexec.swift; path = Blink/Commands/fleetexec.swift; sourceTree = SOURCE_ROOT; };
+		6E054A09A32F00207C78D5E1 /* TabStripView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TabStripView.swift; path = Blink/TabStripView.swift; sourceTree = SOURCE_ROOT; };
 		803B99D62582869200DC99C8 /* BKNotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BKNotificationsView.swift; sourceTree = "<group>"; };
 		803B99E2258381B200DC99C8 /* SettingsHostingController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsHostingController.swift; sourceTree = "<group>"; };
 		85A34303200A837A009324F1 /* webfontloader.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = webfontloader.js; sourceTree = "<group>"; };
 		85A34308200A8FAF009324F1 /* term.css */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.css; path = term.css; sourceTree = "<group>"; };
 		8E1C44F987CE1CC429490D9E /* BookmarkStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BookmarkStore.swift; path = tools/FleetCore/Sources/FleetCore/BookmarkStore.swift; sourceTree = SOURCE_ROOT; };
+		8F9E40248747F975ACDA02A8 /* TabStripRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TabStripRules.swift; path = tools/FleetCore/Sources/FleetCore/TabStripRules.swift; sourceTree = SOURCE_ROOT; };
 		98271250262E4BDB00F883FA /* BlinkFileProviderExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BlinkFileProviderExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		98271258262E4BDB00F883FA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		98271259262E4BDB00F883FA /* BlinkFileProviderExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BlinkFileProviderExtension.entitlements; sourceTree = "<group>"; };
@@ -3744,6 +3748,8 @@
 				866C4B61AA42D3523D88BFCE /* SessionLink.swift in Sources */,
 				11C64EA1940397A96E5211F7 /* LinkActionsView.swift in Sources */,
 				DB244D13BE1F58840AA7DDF3 /* BlinkIntents.swift in Sources */,
+				618A44019CF0250DA3A16A55 /* TabStripRules.swift in Sources */,
+				92F540AE9F20977B4DB133FA /* TabStripView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
