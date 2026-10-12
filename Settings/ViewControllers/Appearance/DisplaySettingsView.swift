@@ -37,6 +37,7 @@ struct DisplaySettingsView: View {
   @State private var overscanIndex: Int
   @State private var keyboardStyleIndex: Int
   @State private var keycasts: Bool
+  @State private var tabStrip: Bool = TabStripView.isEnabled
   @State private var alternateAppIcon: Bool
 
   private var hasAppleSilicon: Bool {
@@ -123,6 +124,13 @@ struct DisplaySettingsView: View {
         Toggle("Keycasts", isOn: $keycasts)
       }
 
+      // -- Sessions bar --
+      Section {
+        Toggle("Sessions Bar", isOn: $tabStrip)
+      } footer: {
+        Text("Shows a tab for each session across the top when more than one is open. Tap a tab to switch.")
+      }
+
       // -- App Icon --
       Section("App Icon") {
         Toggle("Alternate App Icon", isOn: $alternateAppIcon)
@@ -145,6 +153,7 @@ struct DisplaySettingsView: View {
     BLKDefaults.setOversanCompensation(BKOverscanCompensation(rawValue: overscanIndex) ?? .BKBKOverscanCompensationScale)
     BLKDefaults.setKeyboardStyle(Self.keyboardStyleFromIndex(keyboardStyleIndex))
     BLKDefaults.setKeycasts(keycasts)
+    TabStripView.isEnabled = tabStrip
     BLKDefaults.setAlternateAppIcon(alternateAppIcon)
     BLKDefaults.save()
     NotificationCenter.default.post(name: NSNotification.Name(BKAppearanceChanged), object: nil)

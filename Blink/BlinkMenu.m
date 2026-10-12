@@ -44,6 +44,7 @@ const BlinkActionID BlinkActionMoreMenu = @"blink-actions-more-menu";
 const BlinkActionID BlinkActionChangeLayout = @"blink-change-layout";
 const BlinkActionID BlinkActionToggleLayoutLock = @"blink-toggle-layout-lock";
 const BlinkActionID BlinkActionToggleGeoTrack = @"blink-toggle-geo-track";
+const BlinkActionID BlinkActionOpenLink = @"blink-open-link";
 const BlinkActionID BlinkActionToggleCompactActions = @"blink-toggle-compact-actions";
 const BlinkActionID BlinkActionLayoutFill = @"blink-layout-fill";
 const BlinkActionID BlinkActionLayoutFit = @"blink-layout-fit";
@@ -318,6 +319,15 @@ const CGFloat MENU_PADDING = 10.0;
     }];
   }
   
+  if (elementID == BlinkActionOpenLink) {
+    return [UIAction
+            actionWithTitle:noTitle ? @"" : @"Links"
+            image:[UIImage systemImageNamed:@"link"]
+            identifier:elementID handler:^(__kindof UIAction * _Nonnull action) {
+      [[delegate spaceController] openLinkAction];
+    }];
+  }
+
   if (elementID == BlinkActionToggleGeoTrack) {
     UIAction *action = [UIAction
                         actionWithTitle:noTitle ? @"" : @"Geo"

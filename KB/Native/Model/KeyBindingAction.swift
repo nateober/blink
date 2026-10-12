@@ -60,6 +60,7 @@ enum Command: String, Codable, CaseIterable {
   case clipboardCopy
   case clipboardCopyRaw
   case clipboardPaste
+  case clipboardSelectAll
   case selectionGoogle
   case selectionStackOverflow
   case selectionShare
@@ -68,6 +69,7 @@ enum Command: String, Codable, CaseIterable {
   case scratchShow
   case toggleQuickActions
   case toggleGeoTrack
+  case linkOpen
   case hideKeyboard
 
   var title: String {
@@ -102,6 +104,7 @@ enum Command: String, Codable, CaseIterable {
     case .clipboardCopy:          return "Copy"
     case .clipboardCopyRaw:       return "Copy Raw"
     case .clipboardPaste:         return "Paste"
+    case .clipboardSelectAll:     return "Select All"
     case .selectionGoogle:        return "Google Selection"
     case .selectionStackOverflow: return "StackOverflow Selection"
     case .selectionShare:         return "Share Selection"
@@ -110,6 +113,7 @@ enum Command: String, Codable, CaseIterable {
     case .scratchShow:            return "Show Scratch"
     case .toggleQuickActions:     return "Toggle Quick Actions"
     case .toggleGeoTrack:         return "Toggle Geo Track"
+    case .linkOpen:               return "Open Link on Screen"
     case .hideKeyboard:           return "Hide Keyboard"
     }
   }

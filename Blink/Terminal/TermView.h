@@ -113,6 +113,15 @@ extern NSString * TermViewBrowserReadyNotificationKey;
 - (void)focus;
 - (void)reportTouchInPoint:(CGPoint)point;
 - (void)cleanSelection;
+/// Re-applies layout insets (after the space reserved at the top of the window changed).
+- (void)refreshLayoutInsets;
+- (void)scrollToBottom;
+/// Selects everything in the terminal, scrollback included, for the next copy.
+- (void)selectAllText;
+/// Links currently on screen, top to bottom (plain URLs and OSC 8 hyperlinks).
+- (void)visibleLinks:(void (^)(NSArray<NSString *> *links))completion;
+/// The link under a point in the terminal view, or nil.
+- (void)linkAtPoint:(CGPoint)point completion:(void (^)(NSString * _Nullable link))completion;
 - (void)increaseFontSize;
 - (void)decreaseFontSize;
 - (void)resetFontSize;

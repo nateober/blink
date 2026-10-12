@@ -194,6 +194,7 @@ class TermController: UIViewController {
   @objc var termView: TermView { _termView }
 
   private var _sessionPayload: TermSessionPayload? = nil
+  private var _resizePending = false
   private var _session: Session? { _sessionPayload?.session }
 
   required init(meta: SessionMeta? = nil) {
@@ -250,6 +251,8 @@ class TermController: UIViewController {
   public override func viewDidLoad() {
     super.viewDidLoad()
     viewIsLoaded = true
+    NotificationCenter.default.addObserver(self, selector: #selector(_sceneDidActivate(_:)),
+                                           name: UIScene.didActivateNotification, object: nil)
 
     if _sceneRole == .windowExternalDisplayNonInteractive {
       _termView.termUIState.fontSize = BLKDefaults.selectedExternalDisplayFontSize()?.intValue ?? 24
@@ -496,7 +499,31 @@ extension TermController: TermDeviceDelegate {
   public func deviceSizeChanged() {
     print("Terminal size changed - rows: \(_termDevice.rows) x cols: \(_termDevice.cols)")
     delegate?.terminalDidResize?(control: self)
+    // Leaving the app hides the keyboard, which resizes the terminal for a moment; coming
+    // back shows it again. Telling the session about those passing sizes makes mosh redraw
+    // for a screen that is gone by the time it arrives, and lines are lost. So while the
+    // scene isn't active the change waits, and the size that holds once it is active is sent.
+    let state = viewIfLoaded?.window?.windowScene?.activationState
+    if ResizeRules.defersResize(sceneIsActive: state == nil || state == .foregroundActive) {
+      _resizePending = true
+      return
+    }
     _session?.sigwinch()
+  }
+
+  @objc private func _sceneDidActivate(_ notification: Notification) {
+    guard _resizePending,
+          let scene = notification.object as? UIScene,
+          scene === viewIfLoaded?.window?.windowScene
+    else { return }
+    // Give the keyboard time to come back and the layout to settle.
+    DispatchQueue.main.asyncAfter(deadline: .now() + ResizeRules.settleDelay) { [weak self] in
+      guard let self, self._resizePending else { return }
+      if self.viewIfLoaded?.window?.windowScene?.activationState == .foregroundActive {
+        self._resizePending = false
+        self._session?.sigwinch()
+      }
+    }
   }
 
   public func viewFontSizeChanged(_ size: Int) {
@@ -543,6 +570,14 @@ extension TermController: SuspendableSession {
     guard let termUIState: TermUIState = unarchiver.bk_decode(of: [TermUIState.self], for: ArchiveKey.termUIState)
     else {
       return
+    }
+
+    // A restored session carries the theme it was archived with; a style that follows the
+    // system look may want the other one by now.
+    let style = TerminalStyleStore.shared.selectedStyle
+    if style.darkThemeName != nil,
+       termUIState.themeName == style.themeName || termUIState.themeName == style.darkThemeName {
+      termUIState.themeName = TerminalStyleStore.shared.bridgedAppearanceThemeName
     }
 
     _termView.applyTermUIState(termUIState)
@@ -638,7 +673,7 @@ extension Notification.Name {
     let state = TermUIState()
     state.fontSize = BLKDefaults.selectedFontSize()?.intValue ?? 16
     state.fontName = BLKDefaults.selectedFontName()
-    state.themeName = BLKDefaults.selectedThemeName()
+    state.themeName = TerminalStyleStore.shared.bridgedAppearanceThemeName
     state.enableBold = UInt(BLKDefaults.enableBold())
     state.boldAsBright = BLKDefaults.isBoldAsBright()
     state.layoutMode = BLKDefaults.layoutMode().rawValue

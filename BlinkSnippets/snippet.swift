@@ -53,6 +53,8 @@ public class Snippet: ObservableObject, Hashable, Identifiable {
   public let language: String
   public let isEncrypted: Bool
   public let isDangerous: Bool
+  /// A prompt for an AI agent, not shell code. Marked by a `.prompt` extension (`name.prompt.sh`).
+  public let isPrompt: Bool
   public let indexable: String
 
   // Title and extension
@@ -75,6 +77,7 @@ public class Snippet: ObservableObject, Hashable, Identifiable {
     (self.title, self.ext) = Self.parseName(name)
     self.isEncrypted = self.ext.contains("ext")
     self.isDangerous = self.ext.contains("danger")
+    self.isPrompt = self.ext.contains("prompt")
     self.language = self.ext.first ?? "txt"
     self.folder = folder
     self.indexable = "\(self.folder)/\(self.title)".lowercased()

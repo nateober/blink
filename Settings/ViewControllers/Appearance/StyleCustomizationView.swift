@@ -88,6 +88,42 @@ struct StyleCustomizationView: View {
           }
         }
 
+        // -- Dark Mode theme --
+        Section {
+          Button {
+            editingStyle.darkThemeName = nil
+            applyToPreview()
+          } label: {
+            HStack {
+              Text("Same as above").foregroundColor(.primary)
+              Spacer()
+              if (editingStyle.darkThemeName ?? "").isEmpty {
+                Image(systemName: "checkmark")
+                  .foregroundColor(.accentColor)
+              }
+            }
+          }
+          ForEach(themes, id: \.name) { theme in
+            Button {
+              editingStyle.darkThemeName = theme.name
+              applyToPreview()
+            } label: {
+              HStack {
+                Text(theme.name).foregroundColor(.primary)
+                Spacer()
+                if editingStyle.darkThemeName == theme.name {
+                  Image(systemName: "checkmark")
+                    .foregroundColor(.accentColor)
+                }
+              }
+            }
+          }
+        } header: {
+          Text("Dark Mode Theme")
+        } footer: {
+          Text("Pick a second theme to follow the system: the theme above is used in Light Mode and this one in Dark Mode. Open terminals switch as the system does.")
+        }
+
         // -- Fonts --
         Section("Fonts") {
           ForEach(fonts, id: \.name) { font in

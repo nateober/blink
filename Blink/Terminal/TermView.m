@@ -420,9 +420,12 @@ struct winsize __winSizeFromJSON(NSDictionary *json) {
   self.termUIState = termUIState;
 
   NSArray<NSString *> *commands = [self _jsCommandsForTermUIState:termUIState];
-  NSString *js = [commands componentsJoinedByString:@"\n"];
+  NSString *js = [[commands componentsJoinedByString:@"\n"] stringByAppendingString:@"\nterm_syncColors();"];
   [_webView evaluateJavaScript:js completionHandler:^(id result, NSError *error) {
-    [self _syncTerminalState];
+    // The page repaints its colours a moment later; read the background back after that.
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.15 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+      [self _syncTerminalState];
+    });
   }];
 
   if (termUIState.layoutMode != [self currentLayoutMode]) {
@@ -451,6 +454,44 @@ struct winsize __winSizeFromJSON(NSDictionary *json) {
                                               blue:[bgColor[2] floatValue] / 255.0f
                                              alpha:1];
     }
+  }];
+}
+
+- (void)scrollToBottom
+{
+  [_gestureInteraction scrollToBottom];
+}
+
+- (void)refreshLayoutInsets
+{
+  [self.constraintManager refresh];
+  [self setNeedsLayout];
+}
+
+- (void)selectAllText
+{
+  [_webView evaluateJavaScript:term_selectAll() completionHandler:nil];
+}
+
+- (void)visibleLinks:(void (^)(NSArray<NSString *> *links))completion
+{
+  [_webView evaluateJavaScript:term_visibleUrls() completionHandler:^(id result, NSError *error) {
+    NSMutableArray<NSString *> *links = [NSMutableArray array];
+    if ([result isKindOfClass:[NSArray class]]) {
+      for (id item in (NSArray *)result) {
+        if ([item isKindOfClass:[NSString class]]) {
+          [links addObject:item];
+        }
+      }
+    }
+    completion(links);
+  }];
+}
+
+- (void)linkAtPoint:(CGPoint)point completion:(void (^)(NSString * _Nullable link))completion
+{
+  [_webView evaluateJavaScript:term_urlAtPoint(point) completionHandler:^(id result, NSError *error) {
+    completion([result isKindOfClass:[NSString class]] ? result : nil);
   }];
 }
 
@@ -1135,6 +1176,8 @@ static NSString * _sanitizeTextForClipboard(NSString *text) {
   NSMutableArray *actions = [[NSMutableArray alloc] init];
   
   if (_hasSelection) {
+    [actions addObject:[UICommand commandWithTitle:@"Select All" image: [UIImage systemImageNamed:@"text.viewfinder"]
+                                            action:@selector(selectAll:) propertyList:nil]];
     if (_detectedLink) {
       NSString *urlName = [self _menuTitleFromNSURL: _detectedLink];
       NSMutableArray *urlActions = [[NSMutableArray alloc] init];

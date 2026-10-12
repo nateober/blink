@@ -73,6 +73,7 @@
 		07FDDC5625C9B28200A40529 /* LibSSH.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = D2334EC425C1C04700385378 /* LibSSH.xcframework */; };
 		084D4A78A7677D2E5F548AAF /* fleetexec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 697C48E6817F4665CE9878A6 /* fleetexec.swift */; };
 		0D774CB0BB7C1ADAEF597FCC /* mounts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 563A4C6B82F6FED5F85338BB /* mounts.swift */; };
+		11C64EA1940397A96E5211F7 /* LinkActionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 443B4ADF9B78FAA292574814 /* LinkActionsView.swift */; };
 		11DE4E97AD77A47E258C9685 /* NotificationInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F742FBB5A70262436FFCB3 /* NotificationInbox.swift */; };
 		132041B39AA062301DE04BBA /* VoiceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E8D47CFBFA30199A43C2CB2 /* VoiceEngine.swift */; };
 		23E148FE8ADC216F4B6FB3BF /* ExitTrailer.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE948F3BADB540C3A2F0504 /* ExitTrailer.swift */; };
@@ -83,11 +84,15 @@
 		45B249539BB2823BC38AA435 /* FleetScript.swift in Sources */ = {isa = PBXBuildFile; fileRef = 311C4648A219954E177F837C /* FleetScript.swift */; };
 		4BF54BEFB4F1587925A69EBD /* FleetActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B6F484497B202D9902C7DD8 /* FleetActivityAttributes.swift */; };
 		52304E32B9D950805DDD4DEC /* FleetActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B904FE1A827770F990CE9A7 /* FleetActivityController.swift */; };
+		618A44019CF0250DA3A16A55 /* TabStripRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F9E40248747F975ACDA02A8 /* TabStripRules.swift */; };
 		68124C808D8B2957AEEFBEC1 /* VoiceDictation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DB44577BCD8A380453D9775 /* VoiceDictation.swift */; };
 		803B99D72582869200DC99C8 /* BKNotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 803B99D62582869200DC99C8 /* BKNotificationsView.swift */; };
 		803B99E3258381B200DC99C8 /* SettingsHostingController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 803B99E2258381B200DC99C8 /* SettingsHostingController.swift */; };
 		85A34307200A837A009324F1 /* webfontloader.js in Resources */ = {isa = PBXBuildFile; fileRef = 85A34303200A837A009324F1 /* webfontloader.js */; };
 		85A34309200A8FAF009324F1 /* term.css in Resources */ = {isa = PBXBuildFile; fileRef = 85A34308200A8FAF009324F1 /* term.css */; };
+		866C4B61AA42D3523D88BFCE /* SessionLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21F847D3B17F3ECC31DEAC2B /* SessionLink.swift */; };
+		8AFC40AB851C8DE5EDB7B3B2 /* AppearanceRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3973437ABB116776FF5FF6A0 /* AppearanceRules.swift */; };
+		92F540AE9F20977B4DB133FA /* TabStripView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E054A09A32F00207C78D5E1 /* TabStripView.swift */; };
 		9827126B262E4BDB00F883FA /* BlinkFileProviderExtension.appex in Embed PlugIns */ = {isa = PBXBuildFile; fileRef = 98271250262E4BDB00F883FA /* BlinkFileProviderExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A07E439AA1EE99BBCCEB7C16 /* VoiceRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E354EEAA61AE943A07768C9 /* VoiceRules.swift */; };
 		A12D430E83AF3E532A02D536 /* FleetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCD14596A11D1B5F0CC59170 /* FleetIntents.swift */; };
@@ -239,6 +244,8 @@
 		BDF40FEB2C14A6CE00DF41C1 /* AgentSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDF40FE92C14A6CE00DF41C1 /* AgentSettingsView.swift */; };
 		BDFA97322D7F49EF0020BBF2 /* ConfettiSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = BDFA97312D7F49EF0020BBF2 /* ConfettiSwiftUI */; };
 		BDFA97352D959BC90020BBF2 /* TypingText.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDFA97342D959BC90020BBF2 /* TypingText.swift */; };
+		C69C4F7583E48D93E2E8C103 /* LinkRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28BF41E58230DB2AFA4B6C9A /* LinkRules.swift */; };
+		C74A44A99EB2F473913487F5 /* TerminalViewRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89D046C5BA976A3B71C2513E /* TerminalViewRules.swift */; };
 		C94437571D8311960096F84E /* BKResource.m in Sources */ = {isa = PBXBuildFile; fileRef = C94437561D8311960096F84E /* BKResource.m */; };
 		C94437601D831CD30096F84E /* Themes in Resources */ = {isa = PBXBuildFile; fileRef = C944375F1D831CD30096F84E /* Themes */; };
 		C94437651D838ABF0096F84E /* Fonts in Resources */ = {isa = PBXBuildFile; fileRef = C94437641D838ABF0096F84E /* Fonts */; };
@@ -492,6 +499,7 @@
 		D2FBEC0B27CF505D00FD974A /* browse.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2FBEC0727CF505D00FD974A /* browse.swift */; };
 		D2FCB4DD2339F9DB00A88108 /* UIScrollView+Paging.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2FCB4DC2339F9DB00A88108 /* UIScrollView+Paging.swift */; };
 		DAEE42ADBB621EEC06BB2B5B /* PathManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E566472EA570311187C36EB5 /* PathManager.swift */; };
+		DB244D13BE1F58840AA7DDF3 /* BlinkIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17E04BBB954D0172C23E5928 /* BlinkIntents.swift */; };
 		FF9D45DDB1C76A8B1479A403 /* PushRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA82458DB0E808054C4BFB1B /* PushRegistrar.swift */; };
 /* End PBXBuildFile section */
 
@@ -854,23 +862,31 @@
 		07FABC1425C9AF8F00E1CC2C /* CopyFilesTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CopyFilesTests.swift; sourceTree = "<group>"; };
 		07FABC2125C9AFC400E1CC2C /* String+Extension.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "String+Extension.swift"; sourceTree = "<group>"; };
 		0B904FE1A827770F990CE9A7 /* FleetActivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FleetActivityController.swift; path = Blink/Fleet/FleetActivityController.swift; sourceTree = SOURCE_ROOT; };
+		17E04BBB954D0172C23E5928 /* BlinkIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BlinkIntents.swift; path = Blink/Intents/BlinkIntents.swift; sourceTree = SOURCE_ROOT; };
 		1B6F484497B202D9902C7DD8 /* FleetActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FleetActivityAttributes.swift; path = Blink/Fleet/FleetActivityAttributes.swift; sourceTree = SOURCE_ROOT; };
+		21F847D3B17F3ECC31DEAC2B /* SessionLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SessionLink.swift; path = tools/FleetCore/Sources/FleetCore/SessionLink.swift; sourceTree = SOURCE_ROOT; };
+		28BF41E58230DB2AFA4B6C9A /* LinkRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LinkRules.swift; path = tools/FleetCore/Sources/FleetCore/LinkRules.swift; sourceTree = SOURCE_ROOT; };
 		298C43BC9C86A768883707AD /* HeadlessSSHRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HeadlessSSHRunner.swift; path = Blink/Fleet/HeadlessSSHRunner.swift; sourceTree = SOURCE_ROOT; };
 		311C4648A219954E177F837C /* FleetScript.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FleetScript.swift; path = tools/FleetCore/Sources/FleetCore/FleetScript.swift; sourceTree = SOURCE_ROOT; };
 		36F742FBB5A70262436FFCB3 /* NotificationInbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NotificationInbox.swift; path = Blink/Fleet/NotificationInbox.swift; sourceTree = SOURCE_ROOT; };
+		3973437ABB116776FF5FF6A0 /* AppearanceRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppearanceRules.swift; path = tools/FleetCore/Sources/FleetCore/AppearanceRules.swift; sourceTree = SOURCE_ROOT; };
 		3DB44577BCD8A380453D9775 /* VoiceDictation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceDictation.swift; path = Blink/Voice/VoiceDictation.swift; sourceTree = SOURCE_ROOT; };
 		3E8D47CFBFA30199A43C2CB2 /* VoiceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceEngine.swift; path = Blink/Voice/VoiceEngine.swift; sourceTree = SOURCE_ROOT; };
 		3E9C41B486B94B1C5178AA29 /* PushModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PushModels.swift; path = tools/FleetCore/Sources/FleetCore/PushModels.swift; sourceTree = SOURCE_ROOT; };
+		443B4ADF9B78FAA292574814 /* LinkActionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LinkActionsView.swift; path = Settings/ViewControllers/LinkActionsView.swift; sourceTree = SOURCE_ROOT; };
 		49BA4FF4A8C380146CF6DBAD /* liveactivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = liveactivity.swift; path = Blink/Commands/liveactivity.swift; sourceTree = SOURCE_ROOT; };
 		550C417C8BDEA43D0FFEA49A /* MountManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MountManager.swift; path = tools/FleetCore/Sources/FleetCore/MountManager.swift; sourceTree = SOURCE_ROOT; };
 		563A4C6B82F6FED5F85338BB /* mounts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = mounts.swift; path = Blink/Commands/mounts.swift; sourceTree = SOURCE_ROOT; };
 		5E354EEAA61AE943A07768C9 /* VoiceRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceRules.swift; path = tools/FleetCore/Sources/FleetCore/VoiceRules.swift; sourceTree = SOURCE_ROOT; };
 		697C48E6817F4665CE9878A6 /* fleetexec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = fleetexec.swift; path = Blink/Commands/fleetexec.swift; sourceTree = SOURCE_ROOT; };
+		6E054A09A32F00207C78D5E1 /* TabStripView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TabStripView.swift; path = Blink/TabStripView.swift; sourceTree = SOURCE_ROOT; };
 		803B99D62582869200DC99C8 /* BKNotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BKNotificationsView.swift; sourceTree = "<group>"; };
 		803B99E2258381B200DC99C8 /* SettingsHostingController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsHostingController.swift; sourceTree = "<group>"; };
 		85A34303200A837A009324F1 /* webfontloader.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = webfontloader.js; sourceTree = "<group>"; };
 		85A34308200A8FAF009324F1 /* term.css */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.css; path = term.css; sourceTree = "<group>"; };
+		89D046C5BA976A3B71C2513E /* TerminalViewRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TerminalViewRules.swift; path = tools/FleetCore/Sources/FleetCore/TerminalViewRules.swift; sourceTree = SOURCE_ROOT; };
 		8E1C44F987CE1CC429490D9E /* BookmarkStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BookmarkStore.swift; path = tools/FleetCore/Sources/FleetCore/BookmarkStore.swift; sourceTree = SOURCE_ROOT; };
+		8F9E40248747F975ACDA02A8 /* TabStripRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TabStripRules.swift; path = tools/FleetCore/Sources/FleetCore/TabStripRules.swift; sourceTree = SOURCE_ROOT; };
 		98271250262E4BDB00F883FA /* BlinkFileProviderExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BlinkFileProviderExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		98271258262E4BDB00F883FA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		98271259262E4BDB00F883FA /* BlinkFileProviderExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = BlinkFileProviderExtension.entitlements; sourceTree = "<group>"; };
@@ -3729,6 +3745,14 @@
 				BDE848C7924353A665389742 /* liveactivity.swift in Sources */,
 				132041B39AA062301DE04BBA /* VoiceEngine.swift in Sources */,
 				68124C808D8B2957AEEFBEC1 /* VoiceDictation.swift in Sources */,
+				C69C4F7583E48D93E2E8C103 /* LinkRules.swift in Sources */,
+				8AFC40AB851C8DE5EDB7B3B2 /* AppearanceRules.swift in Sources */,
+				866C4B61AA42D3523D88BFCE /* SessionLink.swift in Sources */,
+				11C64EA1940397A96E5211F7 /* LinkActionsView.swift in Sources */,
+				DB244D13BE1F58840AA7DDF3 /* BlinkIntents.swift in Sources */,
+				618A44019CF0250DA3A16A55 /* TabStripRules.swift in Sources */,
+				92F540AE9F20977B4DB133FA /* TabStripView.swift in Sources */,
+				C74A44A99EB2F473913487F5 /* TerminalViewRules.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

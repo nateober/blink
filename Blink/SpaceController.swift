@@ -101,7 +101,71 @@ class SpaceController: UIViewController {
       if !canDisplayHUD {
         _hud?.hide(animated: false)
       }
+      _updateTabStrip()
     }
+  }
+
+  // The optional sessions bar across the top (Settings > Display).
+  private var _tabStrip: TabStripView?
+  private var _tabStripTimer: Timer?
+  private var _tabStripReservedTop: CGFloat = -1
+
+  /// Shows, hides and refreshes the sessions bar, and keeps terminals clear of it.
+  private func _updateTabStrip() {
+    let isMainWindow = view.window != nil && view.window != ShadowWindow.shared
+      && view.window?.screen == UIScreen.main
+    let visible = isMainWindow && TabStripRules.isVisible(
+      enabled: TabStripView.isEnabled,
+      sessions: _viewportsKeys.count,
+      snipsInputActive: !canDisplayHUD)
+
+    if visible {
+      let strip: TabStripView
+      if let existing = _tabStrip {
+        strip = existing
+      } else {
+        strip = TabStripView(frame: .zero)
+        strip.onSelect = { [weak self] idx in self?._moveToShell(idx: idx) }
+        view.addSubview(strip)
+        _tabStrip = strip
+        // Titles change without telling anyone (the shell sets them), so look now and then.
+        _tabStripTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
+          self?._refreshTabStripLabels()
+        }
+      }
+      let top = view.safeAreaInsets.top
+      strip.frame = CGRect(x: 0, y: top, width: view.bounds.width, height: CGFloat(TabStripRules.height))
+      view.bringSubviewToFront(strip)
+      _refreshTabStripLabels()
+    } else if let strip = _tabStrip {
+      strip.removeFromSuperview()
+      _tabStrip = nil
+      _tabStripTimer?.invalidate()
+      _tabStripTimer = nil
+    }
+
+    guard isMainWindow else { return }
+    let reserved = CGFloat(TabStripRules.reservedTop(visible: visible, safeAreaTop: Double(view.safeAreaInsets.top)))
+    if reserved != _tabStripReservedTop || LayoutConstraintManager.reservedTop != reserved {
+      _tabStripReservedTop = reserved
+      LayoutConstraintManager.reservedTop = reserved
+      forEachActive { term in
+        if term.viewIsLoaded {
+          term.termDevice.view?.refreshLayoutInsets()
+        }
+      }
+    }
+  }
+
+  private func _refreshTabStripLabels() {
+    guard let strip = _tabStrip else { return }
+    var labels: [String] = []
+    for (index, key) in _viewportsKeys.enumerated() {
+      let term: TermController? = SessionRegistry.shared.sessionFromIndexWith(key: key)
+      labels.append(TabStripRules.label(title: term?.title, index: index))
+    }
+    let selected = _currentKey.flatMap { _viewportsKeys.firstIndex(of: $0) } ?? -1
+    strip.update(labels: labels, selected: selected)
   }
 
   private var canSwitchPages: Bool = true {
@@ -140,6 +204,7 @@ class SpaceController: UIViewController {
     }
     
     _snippetsVC?.view.frame = _overlay.frame
+    _updateTabStrip()
     
     if let menu = _blinkMenu {
       let size = _overlay.frame.size;
@@ -269,6 +334,43 @@ class SpaceController: UIViewController {
       overrideUserInterfaceStyle = .dark
     default:
       overrideUserInterfaceStyle = .unspecified
+    }
+    _applyAppearanceTheme()
+    _updateTabStrip()
+  }
+
+  public override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+    super.traitCollectionDidChange(previousTraitCollection)
+    if previousTraitCollection?.userInterfaceStyle != traitCollection.userInterfaceStyle {
+      _applyAppearanceTheme()
+    }
+  }
+
+  /// A style with a dark theme follows the interface look: open terminals switch theme live.
+  private func _applyAppearanceTheme() {
+    let style = TerminalStyleStore.shared.selectedStyle
+    guard let darkThemeName = style.darkThemeName, !darkThemeName.isEmpty else {
+      return
+    }
+    let name = style.themeName(dark: traitCollection.userInterfaceStyle == .dark)
+    var changed = false
+    forEachActive { term in
+      guard let termView = term.termDevice.view else { return }
+      let state = termView.termUIState
+      // Leave terminals alone that use a theme from outside this style (set per session).
+      guard state.themeName != name,
+            state.themeName == style.themeName || state.themeName == darkThemeName else { return }
+      state.themeName = name
+      termView.applyTermUIState(state)
+      changed = true
+    }
+    guard changed else { return }
+    // The terminal reports its new background a moment later; the window follows it.
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+      guard let self, let bgColor = self.currentTerm()?.view.backgroundColor else { return }
+      self.view.backgroundColor = bgColor
+      self._viewportsController.view.backgroundColor = bgColor
+      self.view.window?.backgroundColor = bgColor
     }
   }
   
@@ -543,6 +645,8 @@ Please go to your subscriptions and cancel one of them!
     _hud?.hide(animated: false)
 
     // Check capability flag instead of mode directly
+    _updateTabStrip()
+
     guard canDisplayHUD else {
       return
     }
@@ -776,6 +880,7 @@ extension SpaceController {
     case .scratchShow: showScratchAction()
     case .toggleQuickActions: toggleQuickActionsAction()
     case .toggleGeoTrack: toggleGeoTrack()
+    case .linkOpen: openLinkAction()
     case .tab1: _moveToShell(idx: 0)
     case .tab2: _moveToShell(idx: 1)
     case .tab3: _moveToShell(idx: 2)
@@ -803,6 +908,7 @@ extension SpaceController {
     case .clipboardCopy: KBTracker.shared.input?.copy(self)
     case .clipboardCopyRaw: KBTracker.shared.input?.copyRaw(self)
     case .clipboardPaste: KBTracker.shared.input?.paste(self)
+    case .clipboardSelectAll: KBTracker.shared.input?.selectAll(self)
     case .selectionGoogle: KBTracker.shared.input?.googleSelection(self)
     case .selectionStackOverflow: KBTracker.shared.input?.soSelection(self)
     case .selectionShare: KBTracker.shared.input?.shareSelection(self)
@@ -1063,7 +1169,7 @@ extension SpaceController {
       if DeviceInfo.shared().hasCorners {
         ids.append(contentsOf:  [.layoutMenu])
       }
-      ids.append(contentsOf:  [.toggleLayoutLock, .toggleGeoTrack])
+      ids.append(contentsOf:  [.openLink, .toggleLayoutLock, .toggleGeoTrack])
       menu.delegate = receiver;
       menu.build(withIDs: ids, andAppearance: [:])
       _blinkMenu = menu
@@ -1098,6 +1204,48 @@ extension SpaceController {
       ._toggleQuickActionActionWith(receiver: self)
   }
   
+  /// Opens the link on screen. With several, shows a short list (lowest on screen first).
+  @objc func openLinkAction() {
+    guard let termView = currentDevice?.view else {
+      return
+    }
+    termView.visibleLinks { [weak self] links in
+      guard let self else { return }
+      let urls = LinkPicker.choices(from: links ?? [])
+      switch urls.count {
+      case 0:
+        self._showNote("No links on screen")
+      case 1:
+        blink_openurl(urls[0])
+      default:
+        let sheet = UIAlertController(title: "Links on screen", message: nil, preferredStyle: .actionSheet)
+        for url in urls {
+          sheet.addAction(UIAlertAction(title: LinkPicker.label(for: url), style: .default) { _ in
+            blink_openurl(url)
+          })
+        }
+        sheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        if let popover = sheet.popoverPresentationController {
+          popover.sourceView = self.view
+          popover.sourceRect = CGRect(x: self.view.bounds.midX, y: self.view.bounds.midY, width: 1, height: 1)
+          popover.permittedArrowDirections = []
+        }
+        self.present(sheet, animated: true)
+      }
+    }
+  }
+
+  /// A short message in the HUD style, for actions that had nothing to do.
+  private func _showNote(_ text: String) {
+    let hud = MBProgressHUD.showAdded(to: _overlay, animated: true)
+    hud.mode = .text
+    hud.bezelView.color = .darkGray
+    hud.contentColor = .white
+    hud.isUserInteractionEnabled = false
+    hud.label.text = text
+    hud.hide(animated: true, afterDelay: 1.2)
+  }
+
   @objc func toggleGeoTrack() {
     if GeoManager.shared().traking {
       GeoManager.shared().stop()
@@ -1317,6 +1465,66 @@ extension SpaceController: SnippetContext {
 
 // MARK: SceneIntent handlers
 extension SpaceController {
+  /// Sessions opened by a link with an `id`, so a later link with that id returns to them.
+  private static var _linkSessions: [String: UUID] = [:]
+
+  private func _linkSessionKey(for id: String?) -> UUID? {
+    guard let id, let key = SpaceController._linkSessions[id] else { return nil }
+    guard _viewportsKeys.contains(key) else {
+      // Closed, or it lives in another window.
+      return nil
+    }
+    return key
+  }
+
+  /// Opens, or goes back to, the session a `blinkshell://` link asks for.
+  func openSessionLink(_ link: SessionLink) {
+    let existing = _linkSessionKey(for: link.id)
+    let decision = SessionLinkPolicy.decide(
+      link: link,
+      sessionExists: existing != nil,
+      enabled: LinkActionsSettings.isEnabled,
+      userKey: LinkActionsSettings.userKey)
+
+    switch decision {
+    case .refuse:
+      showAlert(msg: "A link tried to open a session. Link actions are off; turn them on in Settings > Link Actions.")
+    case .run:
+      _runSessionLink(link, existing: existing)
+    case .confirm:
+      let alert = UIAlertController(
+        title: "Run this command?",
+        message: "A link wants to open a session and run:\n\n\(link.command)",
+        preferredStyle: .alert)
+      alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+      alert.addAction(UIAlertAction(title: "Run", style: .default) { [weak self] _ in
+        self?._runSessionLink(link, existing: nil)
+      })
+      present(alert, animated: true)
+    }
+  }
+
+  /// Opens or returns to a session without the link checks, for actions the user set up
+  /// themselves (Shortcuts).
+  func openSession(for link: SessionLink) {
+    _runSessionLink(link, existing: _linkSessionKey(for: link.id))
+  }
+
+  private func _runSessionLink(_ link: SessionLink, existing: UUID?) {
+    if let existing {
+      _moveToShell(key: existing)
+      return
+    }
+    guard link.kind != .focus else {
+      _showNote("No open session named \(link.id ?? "")")
+      return
+    }
+    _newShellAction(command: link.command)
+    if let id = link.id, let key = _currentKey {
+      SpaceController._linkSessions[id] = key
+    }
+  }
+
   @objc func runShellSessionIntent(command: String = "") {
     // Callers reach here both on the main thread (the in-app "Create" tab menu
     // action) and potentially off it (URL / App-Intent entry points). A bare

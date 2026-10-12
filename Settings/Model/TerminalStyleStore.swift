@@ -136,7 +136,8 @@ private struct StoreData: Codable {
       fontSize: original.fontSize,
       cursorBlink: original.cursorBlink,
       boldMode: original.boldMode,
-      boldAsBright: original.boldAsBright
+      boldAsBright: original.boldAsBright,
+      darkThemeName: original.darkThemeName
     )
     styles.append(copy)
     save()
@@ -154,7 +155,8 @@ private struct StoreData: Codable {
       fontSize: style.fontSize,
       cursorBlink: style.cursorBlink,
       boldMode: style.boldMode,
-      boldAsBright: style.boldAsBright
+      boldAsBright: style.boldAsBright,
+      darkThemeName: style.darkThemeName
     )
     styles.append(deduped)
     save()
@@ -221,6 +223,8 @@ private struct StoreData: Codable {
   // MARK: - ObjC Bridge
 
   @objc var bridgedThemeName: String { selectedStyle.themeName }
+  /// The selected style's theme for the current look (its dark theme in Dark Mode, if it has one).
+  @objc var bridgedAppearanceThemeName: String { selectedStyle.themeName(dark: TerminalStyle.interfaceIsDark()) }
   @objc var bridgedFontName: String { selectedStyle.fontName }
   @objc var bridgedFontSize: NSNumber { NSNumber(value: Int(selectedStyle.fontSize)) }
   @objc var bridgedCursorBlink: Bool { selectedStyle.cursorBlink }

@@ -197,6 +197,7 @@ class KeyShortcut: ObservableObject, Codable, Identifiable {
       KeyShortcut(.clipboardCopy, .command, "c"),
       KeyShortcut(.clipboardCopyRaw, [.command, .shift], "c"),
       KeyShortcut(.clipboardPaste, .command, "v"),
+      KeyShortcut(.clipboardSelectAll, .command, "a"),
 
       KeyShortcut(.windowNew, [.command, .shift], "t"),
       KeyShortcut(.windowClose, [.command, .shift], "w"),
@@ -217,7 +218,8 @@ class KeyShortcut: ObservableObject, Codable, Identifiable {
 
       KeyShortcut(.configShow, .command, ","),
       Self.snippetsShowShortcut,
-      Self.scratchShowShortcut
+      Self.scratchShowShortcut,
+      KeyShortcut(.linkOpen, [.command, .shift], "l")
     ]
   }
 }

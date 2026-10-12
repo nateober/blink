@@ -163,6 +163,12 @@ struct SettingsView: View {
           SnippetsConfigView()
         }
 
+        Row {
+          Label("Link Actions", systemImage: "link")
+        } details: {
+          LinkActionsView()
+        }
+
         RowWithStoryBoardId(content: {
           HStack {
             Label("iCloud Sync", systemImage: "icloud")

@@ -208,6 +208,11 @@ static int __sizeOfIncompleteSequenceAtTheEnd(const char *buffer, size_t len) {
   NSString *ctrlC = @"\x03";
   NSString *ctrlD = @"\x04";
 
+  // Typing while scrolled up returns the view to the prompt.
+  if (NSThread.isMainThread) {
+    [self.view scrollToBottom];
+  }
+
   if (_rawMode) {
     [self writeInDirectly: input];
     return;

@@ -162,7 +162,11 @@ class SearchModel: ObservableObject {
       return
     }
 
-    sendContentToReceiver(content: content)
+    if snippet.isPrompt {
+      sendPromptContentToReceiver(content: content)
+    } else {
+      sendContentToReceiver(content: content)
+    }
   }
 
   func copyRawSnippet() {
@@ -229,8 +233,7 @@ class SearchModel: ObservableObject {
     } else {
       snippet = currentSelection!
       self.editingMode = .template
-      // Current snippets always use shell mode
-      self.languageMode = .shell
+      self.languageMode = snippet.isPrompt ? .prompt : .shell
     }
 
     self.currentSnippetName = snippet.fuzzyIndex
@@ -261,6 +264,7 @@ class SearchModel: ObservableObject {
 
   func openNewSnippet() {
     self.newSnippetPresented = true
+    self.languageMode = .shell
 
     let textView = TextViewBuilder.createForSnippetEditing()
     let editorCtrl = NewSnippetViewController(textView: textView, model: self)

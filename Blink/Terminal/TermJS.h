@@ -156,6 +156,21 @@ NSString *term_appendUserCss(NSString *css)
   return [NSString stringWithFormat:@"term_appendUserCss(%@)", _encodeString(css)];
 }
 
+NSString *term_visibleUrls(void)
+{
+  return @"term_visibleUrls();";
+}
+
+NSString *term_urlAtPoint(CGPoint point)
+{
+  return [NSString stringWithFormat:@"term_urlAtPoint(%@, %@);", @(point.x), @(point.y)];
+}
+
+NSString *term_selectAll(void)
+{
+  return @"term_selectAll();";
+}
+
 NSString *term_cleanSelection(void)
 {
   return @"term_cleanSelection();";
