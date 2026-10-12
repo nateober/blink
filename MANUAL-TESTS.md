@@ -82,6 +82,32 @@ Each item names the TestFlight build it first shipped in.
 - [ ] Backgrounding mid-dictation (swipe up) ends it with what was heard; an incoming call too.
 - [ ] Deny Speech in Settings → the strip explains and the mic stays shut.
 
+## Feature F — General improvements (build after 1120)
+Simulator-checked where it can be; these need the phone or iPad.
+- [ ] **Prompt Snips:** new Snip → mode button next to Create → Prompt; it saves, reopens in Prompt
+      mode, and sending it types the text and presses Return. (Snips can't open in the simulator.)
+- [ ] **Links:** with a link on screen, Quick Actions → link icon opens it; with several, a list
+      (newest first). Inside tmux, a link wrapped across two rows opens whole.
+- [ ] **Cmd-click a link** on iPad with a keyboard/trackpad opens it; Cmd-click elsewhere still
+      starts a mouse drag.
+- [ ] **Select All:** selection menu → Select All → Copy gives the whole scrollback. Cmd-A on a
+      hardware keyboard does the same.
+- [ ] **⏺ in Claude Code:** the dot is a plain dot and the text after it lines up with the rows
+      below. Check with your own font too.
+- [ ] **Dark Mode theme:** Appearance → style → Dark Mode Theme; flip Control Center's Dark Mode and
+      open terminals follow, including the margins.
+- [ ] **Session links:** Settings → Link Actions → on, Create Key. From Notes, tap
+      `blinkshell://host/ada?mosh=1&id=ada&key=<key>` → connects; tap again → returns to it.
+      A link without the key shows the command and asks.
+- [ ] **Shortcuts:** "Open Terminal Session" with a host opens Blink connected; "Run Command on
+      Host" returns output; an old "Run Fleet Command" shortcut still runs.
+- [ ] **Sessions bar:** Settings → Display → Sessions Bar. Tabs show live titles (Claude Code's
+      session names), tap switches, first terminal row is not covered, in Cover/Fit/Fill and landscape.
+- [ ] **mosh after app switch (#2294):** mosh in, keyboard up, run a slow counter, switch apps and
+      back: no lines lost. This fix is a hypothesis; if lines still vanish, say so.
+- [ ] **Scrolling under output (#2267):** scroll up while an agent streams output: the view stays
+      put and keeps responding. The reported iPad hang was never reproduced, so this is hardening.
+
 ## Build numbers (TestFlight internal group)
 - 1101 — Phase 1 (mountable iCloud folders)
 - 1102 — Phase 2 (App Intents / Shortcuts)

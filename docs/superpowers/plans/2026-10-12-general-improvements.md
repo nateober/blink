@@ -34,4 +34,9 @@ posted upstream.
 
 ## Progress
 
-(updated as items land)
+- 2026-10-12: all ten coded on `imp/general`, one commit per item or pair; FleetCore 79 tests,
+  link finder 10 checks. Simulator run 1 (items 1 to 4): Snips, symbol alignment, menu Select All
+  and whole-buffer copy passed; it caught the link finder reading rows wrongly and Cmd-A typing
+  an "a", both fixed. Snips can't open in the simulator at all (a path problem that predates this
+  work), so they were checked on a throwaway simulator.
+- Batches collapsed into one build since everything landed the same day.
