@@ -94,6 +94,8 @@ class UIScrollViewWithoutHitTest: UIScrollView {
   private let _termScrollView = UIScrollViewWithoutHitTest()
   private let _jsScrollerPath: String
   private let _handlerName: String
+  private var _scrollReportInFlight = false
+  private var _pendingScrollReport: CGPoint? = nil
   private let _1fTapRecognizer = UITapGestureRecognizer()
   private let _1fPanRecognizer = UIPanGestureRecognizer()
   private let _2fTapRecognizer = UITapGestureRecognizer()
@@ -446,11 +448,28 @@ extension WKWebViewGesturesInteraction: UIGestureRecognizerDelegate {
 }
 
 extension WKWebViewGesturesInteraction: UIScrollViewDelegate {
+  /// Tells the page where the view scrolled to, one call at a time. Each report makes the
+  /// page redraw, so while one is still running only the newest position is kept; a busy
+  /// page then gets the latest position instead of a growing queue of old ones.
+  private func _reportScroll(_ offset: CGPoint) {
+    _pendingScrollReport = offset
+    guard !_scrollReportInFlight, let webView = _wkWebView else { return }
+    _scrollReportInFlight = true
+    _pendingScrollReport = nil
+    webView.evaluateJavaScript("\(_jsScrollerPath).reportScroll(\(offset.x), \(offset.y));") { [weak self] _, _ in
+      guard let self else { return }
+      self._scrollReportInFlight = false
+      if let next = self._pendingScrollReport {
+        self._reportScroll(next)
+      }
+    }
+  }
+
   func scrollViewDidScroll(_ scrollView: UIScrollView) {
     let offset = scrollView.contentOffset
     
     if scrollView === _scrollView {
-      _wkWebView?.evaluateJavaScript("\(_jsScrollerPath).reportScroll(\(offset.x), \(offset.y));", completionHandler: nil)
+      _reportScroll(offset)
       return
     }
     
@@ -482,7 +501,8 @@ extension WKWebViewGesturesInteraction: UIScrollViewDelegate {
       if abs(deltaY) < charHeight {
         return
       }
-      var dY = CGFloat(Int(deltaY) / Int(charHeight)) * charHeight
+      // A character under one point high would make this a division by zero.
+      var dY = CGFloat(Int(deltaY) / max(1, Int(charHeight))) * charHeight
       reportedScroll.y = reportedScroll.y + dY
       _termScrollView.reportedScroll = reportedScroll
       
@@ -538,9 +558,18 @@ extension WKWebViewGesturesInteraction: WKScriptMessageHandler {
       let isPrimary = msg["isPrimary"] as? Bool ?? true
       
       _characterSize = characterSize
+      // New output grows the content. Follow it only when the view was at the bottom and the
+      // user isn't scrolling: pulling the view down under a finger on every new line fights
+      // the drag and floods the page with scroll reports.
+      let follows = ScrollRules.followsNewContent(
+        offsetY: Double(_scrollView.contentOffset.y),
+        contentHeight: Double(_scrollView.contentSize.height),
+        viewHeight: Double(_scrollView.bounds.height),
+        userIsScrolling: _scrollView.isTracking || _scrollView.isDragging || _scrollView.isDecelerating)
+      let bottom = max(contentSize.height - _scrollView.bounds.height, 0)
+      let previousY = _scrollView.contentOffset.y
       _scrollView.contentSize = contentSize
-      let offset = CGPoint(x: 0, y: max(contentSize.height - _scrollView.bounds.height, 0));
-      _scrollView.contentOffset = offset
+      _scrollView.contentOffset = CGPoint(x: 0, y: follows ? bottom : min(previousY, bottom))
       
       _scrollView.panGestureRecognizer.isEnabled = isPrimary
       _termScrollView.panGestureRecognizer.isEnabled = !isPrimary
