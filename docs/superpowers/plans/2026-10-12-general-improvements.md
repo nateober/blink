@@ -40,3 +40,7 @@ posted upstream.
   an "a", both fixed. Snips can't open in the simulator at all (a path problem that predates this
   work), so they were checked on a throwaway simulator.
 - Batches collapsed into one build since everything landed the same day.
+- Simulator run 2 (all items, 34 checks): 27 passed; it caught the light-to-dark switch not
+  repainting and typing no longer returning to the prompt. Both fixed (3d0fb485). Run 3 retested
+  those plus rotation and the brief notes: all pass.
+- Merged into `raw` (b940eb13) and released as TestFlight build 1121, internal group.

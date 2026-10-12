@@ -10,7 +10,7 @@ made "fleet-native" for driving his Tailscale-meshed Macs from an iPhone. **Test
 App Store** (GPL code he doesn't own + App-Store-terms conflict + "Blink" trademark).
 
 ## Current state (2026-10-12)
-- **Build 1120** (dictation SmartKey) is on TestFlight internal. `feat/voice-key` was merged into
+- **Build 1121** (ten general improvements, see handoff.md) is on TestFlight internal; `raw` has it locally, not pushed. Build 1120 (dictation SmartKey) came before it. `feat/voice-key` was merged into
   `raw` on 2026-10-12 (Nate uses the key daily), so `raw` is the baseline and holds everything
   shipped. `feat/tmux-key-config` (iPad tmux key + file-configurable sequence) is still unreleased.
 - **Upstream draft PR:** the dictation key alone (no tmux key, no FleetCore) is offered to
