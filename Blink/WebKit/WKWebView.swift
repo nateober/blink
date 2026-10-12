@@ -465,6 +465,15 @@ extension WKWebViewGesturesInteraction: UIScrollViewDelegate {
     }
   }
 
+  /// Typed input brings the view back to the newest output.
+  @objc func scrollToBottom() {
+    guard !_scrollView.isTracking, !_scrollView.isDragging else { return }
+    let bottom = max(_scrollView.contentSize.height - _scrollView.bounds.height, 0)
+    if _scrollView.contentOffset.y < bottom - 1 {
+      _scrollView.setContentOffset(CGPoint(x: 0, y: bottom), animated: false)
+    }
+  }
+
   func scrollViewDidScroll(_ scrollView: UIScrollView) {
     let offset = scrollView.contentOffset
     

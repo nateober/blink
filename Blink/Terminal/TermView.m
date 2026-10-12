@@ -420,9 +420,12 @@ struct winsize __winSizeFromJSON(NSDictionary *json) {
   self.termUIState = termUIState;
 
   NSArray<NSString *> *commands = [self _jsCommandsForTermUIState:termUIState];
-  NSString *js = [commands componentsJoinedByString:@"\n"];
+  NSString *js = [[commands componentsJoinedByString:@"\n"] stringByAppendingString:@"\nterm_syncColors();"];
   [_webView evaluateJavaScript:js completionHandler:^(id result, NSError *error) {
-    [self _syncTerminalState];
+    // The page repaints its colours a moment later; read the background back after that.
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.15 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+      [self _syncTerminalState];
+    });
   }];
 
   if (termUIState.layoutMode != [self currentLayoutMode]) {
@@ -452,6 +455,11 @@ struct winsize __winSizeFromJSON(NSDictionary *json) {
                                              alpha:1];
     }
   }];
+}
+
+- (void)scrollToBottom
+{
+  [_gestureInteraction scrollToBottom];
 }
 
 - (void)refreshLayoutInsets

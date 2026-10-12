@@ -687,6 +687,20 @@ function term_applySexyTheme(theme) {
   term_set('background-color', theme.background);
 }
 
+// Setting a colour back to hterm's own default value does not always repaint an open
+// terminal, so after a theme is applied the colours are pushed to the screen directly.
+function term_syncColors() {
+  setTimeout(function () {
+    if (!t || !t.setBackgroundColor || !t.scrollPort_) {
+      return;
+    }
+    t.setForegroundColor(term_get('foreground-color'));
+    t.setBackgroundColor(term_get('background-color'));
+    t.setCursorColor(term_get('cursor-color'));
+    t.scrollPort_.invalidate();
+  }, 30);
+}
+
 function term_setAutoCarriageReturn(state) {
   t.setAutoCarriageReturn(state);
 }

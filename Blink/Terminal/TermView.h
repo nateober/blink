@@ -115,6 +115,7 @@ extern NSString * TermViewBrowserReadyNotificationKey;
 - (void)cleanSelection;
 /// Re-applies layout insets (after the space reserved at the top of the window changed).
 - (void)refreshLayoutInsets;
+- (void)scrollToBottom;
 /// Selects everything in the terminal, scrollback included, for the next copy.
 - (void)selectAllText;
 /// Links currently on screen, top to bottom (plain URLs and OSC 8 hyperlinks).
