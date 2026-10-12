@@ -454,6 +454,8 @@ extension SmarterTermInput {
          #selector(Self.googleSelection(_:)),
          #selector(Self.shareSelection(_:)):
       return sender != nil && device?.view?.hasSelection == true
+    case #selector(UIResponder.selectAll(_:)):
+      return true
     case #selector(Self.copyLink(_:)),
          #selector(Self.openLink(_:)):
       return sender != nil && device?.view?.detectedLink != nil
@@ -470,6 +472,14 @@ extension SmarterTermInput {
     }
   }
   
+  override func selectAll(_ sender: Any?) {
+    if shouldUseWKCopyAndPaste() {
+      super.selectAll(sender)
+    } else {
+      device?.view?.selectAllText()
+    }
+  }
+
   override func copy(_ sender: Any?) {
     if shouldUseWKCopyAndPaste() {
       super.copy(sender)

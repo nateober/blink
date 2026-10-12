@@ -454,6 +454,33 @@ struct winsize __winSizeFromJSON(NSDictionary *json) {
   }];
 }
 
+- (void)selectAllText
+{
+  [_webView evaluateJavaScript:term_selectAll() completionHandler:nil];
+}
+
+- (void)visibleLinks:(void (^)(NSArray<NSString *> *links))completion
+{
+  [_webView evaluateJavaScript:term_visibleUrls() completionHandler:^(id result, NSError *error) {
+    NSMutableArray<NSString *> *links = [NSMutableArray array];
+    if ([result isKindOfClass:[NSArray class]]) {
+      for (id item in (NSArray *)result) {
+        if ([item isKindOfClass:[NSString class]]) {
+          [links addObject:item];
+        }
+      }
+    }
+    completion(links);
+  }];
+}
+
+- (void)linkAtPoint:(CGPoint)point completion:(void (^)(NSString * _Nullable link))completion
+{
+  [_webView evaluateJavaScript:term_urlAtPoint(point) completionHandler:^(id result, NSError *error) {
+    completion([result isKindOfClass:[NSString class]] ? result : nil);
+  }];
+}
+
 - (void)setWidth:(NSInteger)count
 {
   [_webView evaluateJavaScript:term_setWidth(count) completionHandler:nil];
@@ -1135,6 +1162,8 @@ static NSString * _sanitizeTextForClipboard(NSString *text) {
   NSMutableArray *actions = [[NSMutableArray alloc] init];
   
   if (_hasSelection) {
+    [actions addObject:[UICommand commandWithTitle:@"Select All" image: [UIImage systemImageNamed:@"text.viewfinder"]
+                                            action:@selector(selectAll:) propertyList:nil]];
     if (_detectedLink) {
       NSString *urlName = [self _menuTitleFromNSURL: _detectedLink];
       NSMutableArray *urlActions = [[NSMutableArray alloc] init];

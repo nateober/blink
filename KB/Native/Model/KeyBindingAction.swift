@@ -68,6 +68,7 @@ enum Command: String, Codable, CaseIterable {
   case scratchShow
   case toggleQuickActions
   case toggleGeoTrack
+  case linkOpen
   case hideKeyboard
 
   var title: String {
@@ -110,6 +111,7 @@ enum Command: String, Codable, CaseIterable {
     case .scratchShow:            return "Show Scratch"
     case .toggleQuickActions:     return "Toggle Quick Actions"
     case .toggleGeoTrack:         return "Toggle Geo Track"
+    case .linkOpen:               return "Open Link on Screen"
     case .hideKeyboard:           return "Hide Keyboard"
     }
   }

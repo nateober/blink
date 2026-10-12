@@ -217,7 +217,8 @@ class KeyShortcut: ObservableObject, Codable, Identifiable {
 
       KeyShortcut(.configShow, .command, ","),
       Self.snippetsShowShortcut,
-      Self.scratchShowShortcut
+      Self.scratchShowShortcut,
+      KeyShortcut(.linkOpen, [.command, .shift], "l")
     ]
   }
 }

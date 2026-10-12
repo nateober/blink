@@ -335,7 +335,7 @@ function term_setFontSize(size) {
 
 function term_setFontFamily(name, fontSizeDetectionMethod) {
   window.fontSizeDetectionMethod = fontSizeDetectionMethod;
-  term_set('font-family', name + ', "DejaVu Sans Mono"');
+  term_set('font-family', name + ', "Blink Symbols", "DejaVu Sans Mono"');
 }
 
 function term_setClipboardWrite(state) {
@@ -368,9 +368,134 @@ function term_loadFontFromCss(url, name) {
   term_setFontFamily(name);
 }
 
+// <pure:links>
+// Finds links in screen rows. `rows` is top to bottom, each {text, wrapped}; `width` is the
+// terminal's column count; `strWidth` measures a string in cells. A row continues onto the next
+// when the terminal wrapped it, or when it fills the full width with no gap at the join (how a
+// wrapped line looks inside tmux, which repaints each row itself).
+// Returns [{url, segments: [{row, start, end}]}] in screen order (indices into each row's text).
+function blink_findUrls(rows, width, strWidth) {
+  strWidth = strWidth || function (s) { return s.length; };
+  var re = /(?:https?:\/\/|mailto:|ssh:\/\/)[^\s<>"'`─-▟]+/g;
+  var out = [];
+  var i = 0;
+  while (i < rows.length) {
+    var parts = [];
+    var offset = 0;
+    var j = i;
+    for (;;) {
+      var text = rows[j].text || '';
+      parts.push({row: j, offset: offset, text: text});
+      offset += text.length;
+      var next = j + 1 < rows.length ? (rows[j + 1].text || '') : null;
+      var joins = next !== null && text.length > 0 && (
+        rows[j].wrapped ||
+        (width > 0 && strWidth(text) >= width && !/\s$/.test(text) && next.length > 0 && !/^\s/.test(next)));
+      if (!joins) { break; }
+      j++;
+    }
+    var line = parts.map(function (p) { return p.text; }).join('');
+    var m;
+    re.lastIndex = 0;
+    while ((m = re.exec(line)) !== null) {
+      var url = m[0];
+      // Sentence punctuation and an unmatched closing bracket are not part of the link.
+      for (;;) {
+        var last = url[url.length - 1];
+        if (/[.,;:!?'"]/.test(last)) { url = url.slice(0, -1); continue; }
+        if (last === ')' && url.split('(').length <= url.split(')').length - 1) { url = url.slice(0, -1); continue; }
+        if (last === ']' && url.split('[').length <= url.split(']').length - 1) { url = url.slice(0, -1); continue; }
+        break;
+      }
+      if (url.length < 8) { continue; }
+      var start = m.index, end = m.index + url.length;
+      var segments = [];
+      parts.forEach(function (p) {
+        var s = Math.max(start, p.offset), e = Math.min(end, p.offset + p.text.length);
+        if (s < e) { segments.push({row: p.row, start: s - p.offset, end: e - p.offset}); }
+      });
+      out.push({url: url, segments: segments});
+    }
+    i = j + 1;
+  }
+  return out;
+}
+// </pure:links>
+
+function _blinkScreenLinks() {
+  var top = t.scrollPort_.getTopRowIndex();
+  var count = t.scrollPort_.visibleRowCount;
+  var rows = [];
+  for (var i = 0; i < count; i++) {
+    var node = t.getRowNode(top + i);
+    rows.push({
+      text: node ? node.textContent : '',
+      wrapped: !!(node && node.getAttribute && node.getAttribute('line-overflow')),
+    });
+  }
+  return {rows: rows, links: blink_findUrls(rows, t.screenSize.width, lib.wc.strWidth)};
+}
+
+// Links on screen, top to bottom, without repeats. Includes OSC 8 hyperlinks.
+function term_visibleUrls() {
+  try {
+    var found = _blinkScreenLinks().links.map(function (l) { return {url: l.url, row: l.segments[0].row}; });
+    var h = t.scrollPort_.characterSize.height || 1;
+    document.querySelectorAll('.uri-node').forEach(function (n) {
+      var uri = n.getAttribute('title') || n.uri;
+      if (uri) { found.push({url: uri, row: n.getBoundingClientRect().top / h | 0}); }
+    });
+    found.sort(function (a, b) { return a.row - b.row; });
+    var seen = {}, urls = [];
+    found.forEach(function (f) { if (!seen[f.url]) { seen[f.url] = true; urls.push(f.url); } });
+    return urls;
+  } catch (e) {
+    return [];
+  }
+}
+
+// The link under a point in the view, or null.
+function term_urlAtPoint(x, y) {
+  try {
+    var el = document.elementFromPoint(x, y);
+    var node = el && el.closest ? el.closest('.uri-node') : null;
+    if (node) { return node.getAttribute('title') || node.uri || null; }
+    var size = t.scrollPort_.characterSize;
+    var row = y / size.height | 0, col = x / size.width | 0;
+    var screen = _blinkScreenLinks();
+    for (var i = 0; i < screen.links.length; i++) {
+      var segments = screen.links[i].segments;
+      for (var k = 0; k < segments.length; k++) {
+        var s = segments[k];
+        if (s.row !== row) { continue; }
+        var text = screen.rows[row].text;
+        var from = lib.wc.strWidth(text.slice(0, s.start)), to = lib.wc.strWidth(text.slice(0, s.end));
+        if (col >= from && col < to) { return screen.links[i].url; }
+      }
+    }
+  } catch (e) {}
+  return null;
+}
+
+// Only the rows on screen exist in the page, so a native selection can never cover the
+// scrollback. Select All marks what is visible and remembers that selection; while it stays
+// unchanged, copy gets the whole buffer instead.
+var _blinkSelectAll = null;
+
+function term_selectAll() {
+  var selection = document.getSelection();
+  selection.selectAllChildren(t.scrollPort_.screen_);
+  _blinkSelectAll = {visible: selection.toString()};
+}
+
+function _blinkBufferText() {
+  return t.getRowsText(0, t.getRowCount()).replace(/\s+$/, '');
+}
+
 function term_getCurrentSelection() {
   const selection = document.getSelection();
     if (!selection || selection.rangeCount === 0 || selection.type === 'Caret') {
+    _blinkSelectAll = null;
     return {base: '', offset: 0, text: ''};
   }
 
@@ -381,9 +506,20 @@ function term_getCurrentSelection() {
   return {
     base: selection.baseNode.textContent,
     offset: selection.baseOffset,
-    text: selection.toString() || "",
+    text: _blinkSelectionText(selection),
     rect,
   };
+}
+
+function _blinkSelectionText(selection) {
+  const text = selection.toString() || "";
+  if (_blinkSelectAll) {
+    if (_blinkSelectAll.visible === text) {
+      return _blinkBufferText();
+    }
+    _blinkSelectAll = null;
+  }
+  return text;
 }
 
 function _modifySelectionByLine(direction) {
@@ -520,6 +656,7 @@ function term_modifySideSelection() {
 }
 
 function term_cleanSelection() {
+  _blinkSelectAll = null;
   document.getSelection().removeAllRanges();
 }
 

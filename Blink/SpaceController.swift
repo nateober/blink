@@ -776,6 +776,7 @@ extension SpaceController {
     case .scratchShow: showScratchAction()
     case .toggleQuickActions: toggleQuickActionsAction()
     case .toggleGeoTrack: toggleGeoTrack()
+    case .linkOpen: openLinkAction()
     case .tab1: _moveToShell(idx: 0)
     case .tab2: _moveToShell(idx: 1)
     case .tab3: _moveToShell(idx: 2)
@@ -1063,7 +1064,7 @@ extension SpaceController {
       if DeviceInfo.shared().hasCorners {
         ids.append(contentsOf:  [.layoutMenu])
       }
-      ids.append(contentsOf:  [.toggleLayoutLock, .toggleGeoTrack])
+      ids.append(contentsOf:  [.openLink, .toggleLayoutLock, .toggleGeoTrack])
       menu.delegate = receiver;
       menu.build(withIDs: ids, andAppearance: [:])
       _blinkMenu = menu
@@ -1098,6 +1099,48 @@ extension SpaceController {
       ._toggleQuickActionActionWith(receiver: self)
   }
   
+  /// Opens the link on screen. With several, shows a short list (lowest on screen first).
+  @objc func openLinkAction() {
+    guard let termView = currentDevice?.view else {
+      return
+    }
+    termView.visibleLinks { [weak self] links in
+      guard let self else { return }
+      let urls = LinkPicker.choices(from: links ?? [])
+      switch urls.count {
+      case 0:
+        self._showNote("No links on screen")
+      case 1:
+        blink_openurl(urls[0])
+      default:
+        let sheet = UIAlertController(title: "Links on screen", message: nil, preferredStyle: .actionSheet)
+        for url in urls {
+          sheet.addAction(UIAlertAction(title: LinkPicker.label(for: url), style: .default) { _ in
+            blink_openurl(url)
+          })
+        }
+        sheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        if let popover = sheet.popoverPresentationController {
+          popover.sourceView = self.view
+          popover.sourceRect = CGRect(x: self.view.bounds.midX, y: self.view.bounds.midY, width: 1, height: 1)
+          popover.permittedArrowDirections = []
+        }
+        self.present(sheet, animated: true)
+      }
+    }
+  }
+
+  /// A short message in the HUD style, for actions that had nothing to do.
+  private func _showNote(_ text: String) {
+    let hud = MBProgressHUD.showAdded(to: _overlay, animated: true)
+    hud.mode = .text
+    hud.bezelView.color = .darkGray
+    hud.contentColor = .white
+    hud.isUserInteractionEnabled = false
+    hud.label.text = text
+    hud.hide(animated: true, afterDelay: 1.2)
+  }
+
   @objc func toggleGeoTrack() {
     if GeoManager.shared().traking {
       GeoManager.shared().stop()

@@ -273,12 +273,20 @@ class UIScrollViewWithoutHitTest: UIScrollView {
             _scrollView.panGestureRecognizer.isEnabled = true
             _termScrollView.panGestureRecognizer.isEnabled = true
           } else {
-            _wkWebView?.evaluateJavaScript("term_reportMouseEvent(\"mousedown\", \(point.x), \(point.y), 1);", completionHandler: nil)
-            _mouseDragMode = true
-            _mouseDragStartPoint = point
-            _1fPanRecognizer.isEnabled = true
-            _scrollView.panGestureRecognizer.isEnabled = false
-            _termScrollView.panGestureRecognizer.isEnabled = false
+            // Cmd-click on a link opens it; anywhere else starts a mouse drag as before.
+            _wkWebView?.evaluateJavaScript("term_urlAtPoint(\(point.x), \(point.y));") { [weak self] result, _ in
+              if let link = result as? String, let url = LinkPicker.choices(from: [link]).first {
+                blink_openurl(url)
+                return
+              }
+              guard let self else { return }
+              self._wkWebView?.evaluateJavaScript("term_reportMouseEvent(\"mousedown\", \(point.x), \(point.y), 1);", completionHandler: nil)
+              self._mouseDragMode = true
+              self._mouseDragStartPoint = point
+              self._1fPanRecognizer.isEnabled = true
+              self._scrollView.panGestureRecognizer.isEnabled = false
+              self._termScrollView.panGestureRecognizer.isEnabled = false
+            }
           }
         } else {
           _wkWebView?.evaluateJavaScript("term_reportMouseClick(\(point.x), \(point.y), 1, \(BLKDefaults.isKeyCastsOn() ? "true" : "false"));", completionHandler: nil)

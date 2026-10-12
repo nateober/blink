@@ -239,6 +239,7 @@
 		BDF40FEB2C14A6CE00DF41C1 /* AgentSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDF40FE92C14A6CE00DF41C1 /* AgentSettingsView.swift */; };
 		BDFA97322D7F49EF0020BBF2 /* ConfettiSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = BDFA97312D7F49EF0020BBF2 /* ConfettiSwiftUI */; };
 		BDFA97352D959BC90020BBF2 /* TypingText.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDFA97342D959BC90020BBF2 /* TypingText.swift */; };
+		C69C4F7583E48D93E2E8C103 /* LinkRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28BF41E58230DB2AFA4B6C9A /* LinkRules.swift */; };
 		C94437571D8311960096F84E /* BKResource.m in Sources */ = {isa = PBXBuildFile; fileRef = C94437561D8311960096F84E /* BKResource.m */; };
 		C94437601D831CD30096F84E /* Themes in Resources */ = {isa = PBXBuildFile; fileRef = C944375F1D831CD30096F84E /* Themes */; };
 		C94437651D838ABF0096F84E /* Fonts in Resources */ = {isa = PBXBuildFile; fileRef = C94437641D838ABF0096F84E /* Fonts */; };
@@ -855,6 +856,7 @@
 		07FABC2125C9AFC400E1CC2C /* String+Extension.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "String+Extension.swift"; sourceTree = "<group>"; };
 		0B904FE1A827770F990CE9A7 /* FleetActivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FleetActivityController.swift; path = Blink/Fleet/FleetActivityController.swift; sourceTree = SOURCE_ROOT; };
 		1B6F484497B202D9902C7DD8 /* FleetActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FleetActivityAttributes.swift; path = Blink/Fleet/FleetActivityAttributes.swift; sourceTree = SOURCE_ROOT; };
+		28BF41E58230DB2AFA4B6C9A /* LinkRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LinkRules.swift; path = tools/FleetCore/Sources/FleetCore/LinkRules.swift; sourceTree = SOURCE_ROOT; };
 		298C43BC9C86A768883707AD /* HeadlessSSHRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HeadlessSSHRunner.swift; path = Blink/Fleet/HeadlessSSHRunner.swift; sourceTree = SOURCE_ROOT; };
 		311C4648A219954E177F837C /* FleetScript.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FleetScript.swift; path = tools/FleetCore/Sources/FleetCore/FleetScript.swift; sourceTree = SOURCE_ROOT; };
 		36F742FBB5A70262436FFCB3 /* NotificationInbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NotificationInbox.swift; path = Blink/Fleet/NotificationInbox.swift; sourceTree = SOURCE_ROOT; };
@@ -3729,6 +3731,7 @@
 				BDE848C7924353A665389742 /* liveactivity.swift in Sources */,
 				132041B39AA062301DE04BBA /* VoiceEngine.swift in Sources */,
 				68124C808D8B2957AEEFBEC1 /* VoiceDictation.swift in Sources */,
+				C69C4F7583E48D93E2E8C103 /* LinkRules.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

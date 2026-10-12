@@ -113,6 +113,12 @@ extern NSString * TermViewBrowserReadyNotificationKey;
 - (void)focus;
 - (void)reportTouchInPoint:(CGPoint)point;
 - (void)cleanSelection;
+/// Selects everything in the terminal, scrollback included, for the next copy.
+- (void)selectAllText;
+/// Links currently on screen, top to bottom (plain URLs and OSC 8 hyperlinks).
+- (void)visibleLinks:(void (^)(NSArray<NSString *> *links))completion;
+/// The link under a point in the terminal view, or nil.
+- (void)linkAtPoint:(CGPoint)point completion:(void (^)(NSString * _Nullable link))completion;
 - (void)increaseFontSize;
 - (void)decreaseFontSize;
 - (void)resetFontSize;
