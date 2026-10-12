@@ -1,3 +1,10 @@
+/* Blink Symbols: one-cell drawings of symbols that otherwise fall back to wide emoji
+   glyphs (for example U+23FA). Built by tools/build_symbols_font.py. */
+@font-face {
+  font-family: 'Blink Symbols';
+  src: url('Fonts/BlinkSymbols.ttf') format('truetype');
+}
+
 /* DejaVu Sans Mono */
 
 @font-face {
