@@ -24,6 +24,12 @@
 > - **`$PATH` inclusion** — `addpath` / `rmpath` / `showpath` put a folder's scripts on `$PATH`.
 > - **Live Activity** (lock screen / Dynamic Island) for a running fleet session — app-side +
 >   widget code; see `docs/LIVE-ACTIVITY-SETUP.md`.
+> - **tmux menu SmartKey** — one tap on the bar opens tmux's action menu (pairs with `tm` on the
+>   fleet hosts).
+> - **Dictation SmartKey** — a mic key on the bar: hold to talk or tap to toggle, transcribed on the
+>   phone (SpeechAnalyzer on iOS 26, SFSpeechRecognizer before that), live transcript in a strip
+>   above the keyboard, and the words typed at the cursor when you stop. No audio leaves the
+>   device; Return stays yours.
 >
 > Design specs, plans, and a code-review record live under `docs/`; build/release notes and the
 > canonical project status are in [`handoff.md`](handoff.md). Pure, testable logic lives in

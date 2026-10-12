@@ -55,6 +55,7 @@ extension KBLayout {
       .key(.ctrl, traits: .default),
       .key(.alt,  traits: .default),
       .icon(.tmuxMenu, traits: .default),
+      .icon(.mic, traits: .default),
       .arrows(traits: .default - .cmdOff),
     ], [
       .key(.tab,  traits: .default - .cmdOn),
