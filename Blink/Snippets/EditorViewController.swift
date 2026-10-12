@@ -61,7 +61,7 @@ class EditorViewController: UIViewController, TextViewDelegate, UINavigationItem
 
     let parts = title.split(separator: "/", maxSplits: 1)
     let category = model.cleanString(str: String(parts[0]))
-    let name = model.cleanString(str:String(parts[1])) + ".sh"
+    let name = model.cleanString(str:String(parts[1])) + model.languageMode.snippetSuffix
 
     do {
       try model.renameSnippet(newCategory: category, newName: name, newContent: self.textView.text)
@@ -375,6 +375,16 @@ extension EditorViewController {
     if isScratch {
       BLKDefaults.setScratchLanguageMode(languageMode.rawValue)
       BLKDefaults.save()
+    } else if let snippet = model.editingSnippet, snippet.isPrompt != (languageMode == .prompt) {
+      // A saved Snip keeps its mode in its file name, so changing the mode renames it.
+      do {
+        try model.renameSnippet(newCategory: snippet.folder, newName: snippet.title + languageMode.snippetSuffix, newContent: self.textView.text)
+      } catch {
+        model.languageMode = snippet.isPrompt ? .prompt : .shell
+        showAlert(msg: "\(error)")
+        _updateNavigationBar()
+        return
+      }
     }
 
     // Configure TextView for the language mode
@@ -433,10 +443,7 @@ extension EditorViewController {
       )
     }
 
-    var configButtons: [UIBarButtonItem] = [pinButton]
-    if isScratch {
-      configButtons.append(languageModeButton)
-    }
+    let configButtons: [UIBarButtonItem] = [pinButton, languageModeButton]
 
     let flexibleSpace = UIBarButtonItem(systemItem: .flexibleSpace)
 

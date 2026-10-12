@@ -196,10 +196,7 @@ class NewSnippetViewController: UIViewController, TextViewDelegate, UINavigation
       textViewBottomConstraint!
     ])
 
-    self.navigationItem.rightBarButtonItem =
-      UIBarButtonItem(
-        title: "Create", style: .done, target: self, action: #selector(create)
-      )
+    _updateRightBarButtonItems()
     self.navigationItem.leftBarButtonItem = UIBarButtonItem(systemItem: .cancel)
     self.navigationItem.leftBarButtonItem?.target = self
     self.navigationItem.leftBarButtonItem?.action = #selector(cancel)
@@ -228,7 +225,32 @@ class NewSnippetViewController: UIViewController, TextViewDelegate, UINavigation
 
     self.onFieldChange()
 
-    textView.configure(for: .shell)
+    textView.configure(for: model.languageMode)
+  }
+
+  private func _updateRightBarButtonItems() {
+    let createButton = UIBarButtonItem(
+      title: "Create", style: .done, target: self, action: #selector(create)
+    )
+    let languageModeButton = UIBarButtonItem(
+      image: UIImage(systemName: model.languageMode == .prompt ? "text.bubble" : "terminal"),
+      primaryAction: nil,
+      menu: UIMenu(title: "Language Mode", children: [
+        UIAction(title: "Shell", image: UIImage(systemName: "terminal"),
+                 state: model.languageMode == .shell ? .on : .off,
+                 handler: { [weak self] _ in self?._setLanguageMode(.shell) }),
+        UIAction(title: "Prompt", image: UIImage(systemName: "text.bubble"),
+                 state: model.languageMode == .prompt ? .on : .off,
+                 handler: { [weak self] _ in self?._setLanguageMode(.prompt) })
+      ])
+    )
+    self.navigationItem.rightBarButtonItems = [createButton, languageModeButton]
+  }
+
+  private func _setLanguageMode(_ languageMode: LanguageMode) {
+    model.languageMode = languageMode
+    textView.configure(for: languageMode)
+    _updateRightBarButtonItems()
   }
   
   @objc func onFieldChange() {
@@ -271,7 +293,7 @@ class NewSnippetViewController: UIViewController, TextViewDelegate, UINavigation
       self.showAlert(msg: "Name can't be empty.")
     }
     
-    name += ".sh"
+    name += model.languageMode.snippetSuffix
     
     let content = textView.text.trimmingCharacters(in: .whitespacesAndNewlines)
     

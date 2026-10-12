@@ -41,6 +41,14 @@ enum LanguageMode: String {
   case shell = "shell"
   case prompt = "prompt"
   // case code(language: TreeSitterLanguage) // Future: for specific language syntax highlighting
+
+  /// File name ending for a saved Snip of this mode. Prompt Snips carry a `.prompt` marker.
+  var snippetSuffix: String {
+    switch self {
+    case .shell: return ".sh"
+    case .prompt: return ".prompt.sh"
+    }
+  }
 }
 
 extension TextView {

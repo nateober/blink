@@ -143,6 +143,17 @@ final class BlinkSnippetsTests: XCTestCase {
     try local.deleteSnippet(folder: "General", name: "Start SSH Connection.sh.enc")
   }
 
+  func testPromptMarker() {
+    let shell = Snippet(name: "deploy.sh", folder: "ops", store: Snippet.scratch().store)
+    XCTAssertFalse(shell.isPrompt)
+    XCTAssertEqual(shell.title, "deploy")
+
+    let prompt = Snippet(name: "review-diff.prompt.sh", folder: "agents", store: Snippet.scratch().store)
+    XCTAssertTrue(prompt.isPrompt)
+    XCTAssertEqual(prompt.title, "review-diff")
+    XCTAssertEqual(prompt.indexable, "agents/review-diff")
+  }
+
   func testSearch() throws {
     let filesIndex = self.sampleFilesIndex()
     
