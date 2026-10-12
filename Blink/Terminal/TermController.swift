@@ -545,6 +545,14 @@ extension TermController: SuspendableSession {
       return
     }
 
+    // A restored session carries the theme it was archived with; a style that follows the
+    // system look may want the other one by now.
+    let style = TerminalStyleStore.shared.selectedStyle
+    if style.darkThemeName != nil,
+       termUIState.themeName == style.themeName || termUIState.themeName == style.darkThemeName {
+      termUIState.themeName = TerminalStyleStore.shared.bridgedAppearanceThemeName
+    }
+
     _termView.applyTermUIState(termUIState)
 
     if _sessionPayload == nil {
@@ -638,7 +646,7 @@ extension Notification.Name {
     let state = TermUIState()
     state.fontSize = BLKDefaults.selectedFontSize()?.intValue ?? 16
     state.fontName = BLKDefaults.selectedFontName()
-    state.themeName = BLKDefaults.selectedThemeName()
+    state.themeName = TerminalStyleStore.shared.bridgedAppearanceThemeName
     state.enableBold = UInt(BLKDefaults.enableBold())
     state.boldAsBright = BLKDefaults.isBoldAsBright()
     state.layoutMode = BLKDefaults.layoutMode().rawValue

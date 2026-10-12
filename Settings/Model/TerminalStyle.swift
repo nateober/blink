@@ -48,6 +48,8 @@ struct TerminalStyle: Codable, Identifiable, Equatable {
   var cursorBlink: Bool
   var boldMode: BoldMode
   var boldAsBright: Bool
+  /// Theme used when the interface is dark. Nil means `themeName` is used in both modes.
+  var darkThemeName: String? = nil
 
   static let defaultFontName: String =
     Bundle.main.infoDictionary?["BLINK_APP_FONT"] as? String ?? "JetBrains Mono"
@@ -72,6 +74,26 @@ struct TerminalStyle: Codable, Identifiable, Equatable {
       boldMode: .auto,
       boldAsBright: false
     )
+  }
+}
+
+// MARK: - Appearance
+
+extension TerminalStyle {
+  /// The theme this style uses for the given interface look.
+  func themeName(dark: Bool) -> String {
+    AppearanceRules.themeName(light: themeName, dark: darkThemeName, isDark: dark)
+  }
+
+  /// Whether new terminals should start dark: the app's forced look, else the system's.
+  static func interfaceIsDark() -> Bool {
+    let override: AppearanceRules.Override
+    switch BLKDefaults.keyboardStyle() {
+    case .light: override = .light
+    case .dark: override = .dark
+    default: override = .system
+    }
+    return AppearanceRules.isDark(override: override, systemIsDark: UIScreen.main.traitCollection.userInterfaceStyle == .dark)
   }
 }
 

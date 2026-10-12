@@ -270,6 +270,42 @@ class SpaceController: UIViewController {
     default:
       overrideUserInterfaceStyle = .unspecified
     }
+    _applyAppearanceTheme()
+  }
+
+  public override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+    super.traitCollectionDidChange(previousTraitCollection)
+    if previousTraitCollection?.userInterfaceStyle != traitCollection.userInterfaceStyle {
+      _applyAppearanceTheme()
+    }
+  }
+
+  /// A style with a dark theme follows the interface look: open terminals switch theme live.
+  private func _applyAppearanceTheme() {
+    let style = TerminalStyleStore.shared.selectedStyle
+    guard let darkThemeName = style.darkThemeName, !darkThemeName.isEmpty else {
+      return
+    }
+    let name = style.themeName(dark: traitCollection.userInterfaceStyle == .dark)
+    var changed = false
+    forEachActive { term in
+      guard let termView = term.termDevice.view else { return }
+      let state = termView.termUIState
+      // Leave terminals alone that use a theme from outside this style (set per session).
+      guard state.themeName != name,
+            state.themeName == style.themeName || state.themeName == darkThemeName else { return }
+      state.themeName = name
+      termView.applyTermUIState(state)
+      changed = true
+    }
+    guard changed else { return }
+    // The terminal reports its new background a moment later; the window follows it.
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+      guard let self, let bgColor = self.currentTerm()?.view.backgroundColor else { return }
+      self.view.backgroundColor = bgColor
+      self._viewportsController.view.backgroundColor = bgColor
+      self.view.window?.backgroundColor = bgColor
+    }
   }
   
   public override func viewDidLoad() {
