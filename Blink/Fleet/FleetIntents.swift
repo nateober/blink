@@ -35,6 +35,8 @@ enum FleetIntentError: Error, CustomLocalizedStringResourceConvertible {
 @available(iOS 16.0, *)
 struct RunFleetCommandIntent: AppIntent {
   static var title: LocalizedStringResource = "Run Fleet Command"
+  // Kept so existing shortcuts keep working; new ones use the general actions in BlinkIntents.swift.
+  static var isDiscoverable: Bool = false
   static var description = IntentDescription(
     "Run a command on a configured Blink host over SSH and return its output."
   )
@@ -53,31 +55,7 @@ struct RunFleetCommandIntent: AppIntent {
 
   @MainActor
   func perform() async throws -> some IntentResult & ReturnsValue<String> {
-    // Friendly error if the alias isn't a saved host (HeadlessSSHRunner also resolves via
-    // ssh_config, but BKHosts is where the Shortcut's hosts live).
-    guard BKHosts.withHost(host) != nil else {
-      throw FleetIntentError.unknownHost(host)
-    }
-    do {
-      // Resolve + authenticate exactly like `ssh <alias>` in the terminal (agent + default
-      // keys + keyboard-interactive), trusting the host key on first use for the owner's fleet.
-      let result = try await HeadlessSSHRunner.run(
-        alias: host, command: command, acceptUnknownHostKeys: true
-      )
-      // A non-zero remote exit is a real failure — surface it (with stderr) instead of
-      // handing Shortcuts a false success with empty/partial stdout.
-      if let code = result.exitCode, code != 0 {
-        let detail = result.stderr.isEmpty ? result.stdout : result.stderr
-        let trimmed = detail.trimmingCharacters(in: .whitespacesAndNewlines)
-        throw FleetIntentError.runFailed("command exited \(code)" + (trimmed.isEmpty ? "" : ": \(trimmed)"))
-      }
-      return .result(value: result.stdout.isEmpty ? "(no output)" : result.stdout)
-    } catch let e as FleetIntentError {
-      throw e
-    } catch {
-      // Surface the real cause instead of App Intents' generic "unspecified error".
-      throw FleetIntentError.runFailed((error as? LocalizedError)?.errorDescription ?? "\(error)")
-    }
+    .result(value: try await HostActionRunner.run(host: host, command: command, what: "command", trustNewHostKey: true))
   }
 }
 
@@ -94,6 +72,8 @@ enum FleetInterpreter: String, AppEnum {
 @available(iOS 16.0, *)
 struct RunFleetScriptIntent: AppIntent {
   static var title: LocalizedStringResource = "Run Fleet Script"
+  // Kept so existing shortcuts keep working; new ones use the general actions in BlinkIntents.swift.
+  static var isDiscoverable: Bool = false
   static var description = IntentDescription(
     "Run a multi-line bash/python script on a configured Blink host over SSH and return its output."
   )
@@ -115,23 +95,10 @@ struct RunFleetScriptIntent: AppIntent {
 
   @MainActor
   func perform() async throws -> some IntentResult & ReturnsValue<String> {
-    guard BKHosts.withHost(host) != nil else { throw FleetIntentError.unknownHost(host) }
     // The script is base64-encoded into a single-line pipeline (see FleetScript) so any
     // content runs verbatim with no escaping/injection.
     let command = FleetScript.command(script: script, interpreter: interpreter.rawValue)
-    do {
-      let result = try await HeadlessSSHRunner.run(alias: host, command: command, acceptUnknownHostKeys: true)
-      if let code = result.exitCode, code != 0 {
-        let detail = result.stderr.isEmpty ? result.stdout : result.stderr
-        let trimmed = detail.trimmingCharacters(in: .whitespacesAndNewlines)
-        throw FleetIntentError.runFailed("script exited \(code)" + (trimmed.isEmpty ? "" : ": \(trimmed)"))
-      }
-      return .result(value: result.stdout.isEmpty ? "(no output)" : result.stdout)
-    } catch let e as FleetIntentError {
-      throw e
-    } catch {
-      throw FleetIntentError.runFailed((error as? LocalizedError)?.errorDescription ?? "\(error)")
-    }
+    return .result(value: try await HostActionRunner.run(host: host, command: command, what: "script", trustNewHostKey: true))
   }
 }
 
@@ -139,22 +106,31 @@ struct RunFleetScriptIntent: AppIntent {
 struct BlinkFleetShortcuts: AppShortcutsProvider {
   static var appShortcuts: [AppShortcut] {
     AppShortcut(
-      intent: RunFleetCommandIntent(),
+      intent: RunCommandOnHostIntent(),
       phrases: [
         "Run a command on a host with \(.applicationName)",
-        "Ask my fleet with \(.applicationName)"
+        "Run a command with \(.applicationName)"
       ],
-      shortTitle: "Run Fleet Command",
+      shortTitle: "Run Command on Host",
       systemImageName: "terminal"
     )
     AppShortcut(
-      intent: RunFleetScriptIntent(),
+      intent: RunScriptOnHostIntent(),
       phrases: [
         "Run a script on a host with \(.applicationName)",
-        "Run a fleet script with \(.applicationName)"
+        "Run a script with \(.applicationName)"
       ],
-      shortTitle: "Run Fleet Script",
+      shortTitle: "Run Script on Host",
       systemImageName: "scroll"
+    )
+    AppShortcut(
+      intent: OpenTerminalSessionIntent(),
+      phrases: [
+        "Open a session with \(.applicationName)",
+        "Open a terminal with \(.applicationName)"
+      ],
+      shortTitle: "Open Terminal Session",
+      systemImageName: "macwindow"
     )
   }
 }

@@ -159,7 +159,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
    */
   func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
 
-    if let sshUrlScheme = URLContexts.first(where: { $0.url.scheme == "ssh" })?.url {
+    if let sessionLink = URLContexts.first(where: { $0.url.scheme?.lowercased() == "blinkshell" })?.url {
+      _handleSessionLink(with: sessionLink)
+    } else if let sshUrlScheme = URLContexts.first(where: { $0.url.scheme == "ssh" })?.url {
       _handleSshUrlScheme(with: sshUrlScheme)
     } else if let codeUrlScheme = URLContexts.first(where: { $0.url.scheme == "vscode" })?.url {
       _handleCodeUrlScheme(with: codeUrlScheme)
@@ -449,6 +451,31 @@ fileprivate extension URL {
 
 // MARK: Manage the `scene(_:openURLContexts:)` actions
 extension SceneDelegate {
+
+  /*
+   Handles `blinkshell://run`, `blinkshell://host/<alias>` and `blinkshell://focus` links.
+   Other blinkshell links (x-callback replies) are left alone.
+   */
+  private func _handleSessionLink(with url: URL) {
+    switch SessionLink.parse(url) {
+    case .success(let link):
+      _spCtrl.openSessionLink(link)
+    case .failure(.notASessionLink):
+      break
+    case .failure(let error):
+      _spCtrl.showAlert(msg: "This link can't be opened: \(SceneDelegate._describe(error)).")
+    }
+  }
+
+  private static func _describe(_ error: SessionLink.ParseError) -> String {
+    switch error {
+    case .missingCommand: return "it has no command"
+    case .badCommand: return "its command has a line break or control characters, or is too long"
+    case .badHost: return "its host name is not a plain host name"
+    case .badID: return "its session id is missing or not a plain name"
+    case .notASessionLink: return "it is not a session link"
+    }
+  }
 
   /*
    Handles the `ssh://` URL scheme.

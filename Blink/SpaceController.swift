@@ -1396,6 +1396,66 @@ extension SpaceController: SnippetContext {
 
 // MARK: SceneIntent handlers
 extension SpaceController {
+  /// Sessions opened by a link with an `id`, so a later link with that id returns to them.
+  private static var _linkSessions: [String: UUID] = [:]
+
+  private func _linkSessionKey(for id: String?) -> UUID? {
+    guard let id, let key = SpaceController._linkSessions[id] else { return nil }
+    guard _viewportsKeys.contains(key) else {
+      // Closed, or it lives in another window.
+      return nil
+    }
+    return key
+  }
+
+  /// Opens, or goes back to, the session a `blinkshell://` link asks for.
+  func openSessionLink(_ link: SessionLink) {
+    let existing = _linkSessionKey(for: link.id)
+    let decision = SessionLinkPolicy.decide(
+      link: link,
+      sessionExists: existing != nil,
+      enabled: LinkActionsSettings.isEnabled,
+      userKey: LinkActionsSettings.userKey)
+
+    switch decision {
+    case .refuse:
+      showAlert(msg: "A link tried to open a session. Link actions are off; turn them on in Settings > Link Actions.")
+    case .run:
+      _runSessionLink(link, existing: existing)
+    case .confirm:
+      let alert = UIAlertController(
+        title: "Run this command?",
+        message: "A link wants to open a session and run:\n\n\(link.command)",
+        preferredStyle: .alert)
+      alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+      alert.addAction(UIAlertAction(title: "Run", style: .default) { [weak self] _ in
+        self?._runSessionLink(link, existing: nil)
+      })
+      present(alert, animated: true)
+    }
+  }
+
+  /// Opens or returns to a session without the link checks, for actions the user set up
+  /// themselves (Shortcuts).
+  func openSession(for link: SessionLink) {
+    _runSessionLink(link, existing: _linkSessionKey(for: link.id))
+  }
+
+  private func _runSessionLink(_ link: SessionLink, existing: UUID?) {
+    if let existing {
+      _moveToShell(key: existing)
+      return
+    }
+    guard link.kind != .focus else {
+      _showNote("No open session named \(link.id ?? "")")
+      return
+    }
+    _newShellAction(command: link.command)
+    if let id = link.id, let key = _currentKey {
+      SpaceController._linkSessions[id] = key
+    }
+  }
+
   @objc func runShellSessionIntent(command: String = "") {
     // Callers reach here both on the main thread (the in-app "Create" tab menu
     // action) and potentially off it (URL / App-Intent entry points). A bare
