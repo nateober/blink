@@ -9,10 +9,13 @@ Nate's personal fork of [blinksh/blink](https://github.com/blinksh/blink) (GPL-3
 made "fleet-native" for driving his Tailscale-meshed Macs from an iPhone. **TestFlight-only, never
 App Store** (GPL code he doesn't own + App-Store-terms conflict + "Blink" trademark).
 
-## Current state (2026-10-10)
-- **Build 1120** (dictation SmartKey) uploading to TestFlight internal from branch **`feat/voice-key`**
-  (off `raw`, not merged). PRs #1–#3 are merged; `raw` is the baseline. `feat/tmux-key-config`
-  (iPad tmux key + file-configurable sequence) is still unreleased.
+## Current state (2026-10-12)
+- **Build 1120** (dictation SmartKey) is on TestFlight internal. `feat/voice-key` was merged into
+  `raw` on 2026-10-12 (Nate uses the key daily), so `raw` is the baseline and holds everything
+  shipped. `feat/tmux-key-config` (iPad tmux key + file-configurable sequence) is still unreleased.
+- **Upstream draft PR:** the dictation key alone (no tmux key, no FleetCore) is offered to
+  blinksh/blink as draft PR #2297 from branch `voice-key-upstream` (one commit on `upstream/raw`).
+  Changes the maintainer asks for go on that branch, not on `raw`.
 - Shipped: iCloud-folder mounts (linked into `~/<name>`), `Run Fleet Command` + `Run Fleet Script`
   App Intents + the `fleetexec` terminal twin, push + `notiflog` inbox, `$PATH` inclusion, the tmux
   menu SmartKey, and (1120) the dictation SmartKey (on-device speech, live strip, typed at the
@@ -21,14 +24,14 @@ App Store** (GPL code he doesn't own + App-Store-terms conflict + "Blink" tradem
 ## Open items — these need NATE (surface them at the start of a fresh session)
 1. **Add the Live Activity widget-extension target in Xcode** → `docs/LIVE-ACTIVITY-SETUP.md`. Until
    then the lock-screen / Dynamic Island indicator can't render.
-2. **Device-accept build 1120's dictation key** (MANUAL-TESTS § Feature E), then merge
-   `feat/voice-key` → `raw` (and decide whether `feat/tmux-key-config` ships).
+2. **Finish the dictation key's device checklist** (MANUAL-TESTS § Feature E: bare shell, vim,
+   hold versus tap), and decide whether `feat/tmux-key-config` ships.
 3. **On-device acceptance** (sim can't cover these): iCloud-folder linking into `~`, `addpath` →
    `$PATH` membership, `Run Fleet Script`, real-APNs push. Checklist: `MANUAL-TESTS.md`.
 
 ## Working here
 ```bash
-git checkout feat/voice-key                   # current branch (dictation key); raw = baseline
+git checkout raw                              # baseline; branch new work off it
 swift test --package-path tools/FleetCore     # 51 tests = pure-logic verification path
 # build for sim: xcodebuild ... -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' ENABLE_DEBUG_DYLIB=NO
 #   (keep code signing ON: CODE_SIGNING_ALLOWED=NO drops the app-group entitlement → crash in Migrator at launch)
