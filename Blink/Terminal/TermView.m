@@ -473,6 +473,21 @@ struct winsize __winSizeFromJSON(NSDictionary *json) {
   [_webView evaluateJavaScript:term_selectAll() completionHandler:nil];
 }
 
+static NSString * _sanitizeTextForClipboard(NSString *text);
+
+- (void)copyAllText:(void (^)(NSInteger lines))completion
+{
+  [_webView evaluateJavaScript:term_bufferText() completionHandler:^(id result, NSError *error) {
+    NSString *text = [result isKindOfClass:[NSString class]] ? _sanitizeTextForClipboard(result) : @"";
+    if (text.length == 0) {
+      completion(0);
+      return;
+    }
+    [UIPasteboard generalPasteboard].string = text;
+    completion([text componentsSeparatedByString:@"\n"].count);
+  }];
+}
+
 - (void)visibleLinks:(void (^)(NSArray<NSString *> *links))completion
 {
   [_webView evaluateJavaScript:term_visibleUrls() completionHandler:^(id result, NSError *error) {

@@ -132,3 +132,9 @@ Simulator-checked where it can be; these need the phone or iPad.
   return output now. If it still errors, the message is now a readable SSH reason — capture it.
 - 1120 — dictation SmartKey (branch `feat/voice-key`, off `raw`; not merged). Sim-verified key +
          permission flow + listening strip; transcription/insertion = device.
+
+## Feature G: Copy All and Settings quick actions (build 1122)
+
+- [ ] Double-tap the Command SmartKey: the bar shows Snippets, Copy All, Settings, New, Close, then More.
+- [ ] In an ssh or mosh session with scrollback, Copy All: note "Copied N lines"; paste elsewhere has the whole buffer, scrollback included.
+- [ ] Settings opens settings over a live remote session; closing it returns to the session still connected.

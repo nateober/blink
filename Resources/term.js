@@ -494,6 +494,10 @@ function term_selectAll() {
   _blinkSelectAll = {visible: selection.toString()};
 }
 
+function term_bufferText() {
+  return _blinkBufferText();
+}
+
 function _blinkBufferText() {
   return t.getRowsText(0, t.getRowCount()).replace(/\s+$/, '');
 }

@@ -1164,12 +1164,13 @@ extension SpaceController {
       self.view.addSubview(menu.tapToCloseView)
       
       var ids: [BlinkActionID] = []
-      ids.append(contentsOf:  [.snippets, .tabClose, .tabCreate])
+      // On a phone the first five show and the rest go behind "More".
+      ids.append(contentsOf:  [.snippets, .copyAll, .settings, .tabCreate, .tabClose, .openLink])
       
       if DeviceInfo.shared().hasCorners {
         ids.append(contentsOf:  [.layoutMenu])
       }
-      ids.append(contentsOf:  [.openLink, .toggleLayoutLock, .toggleGeoTrack])
+      ids.append(contentsOf:  [.toggleLayoutLock, .toggleGeoTrack])
       menu.delegate = receiver;
       menu.build(withIDs: ids, andAppearance: [:])
       _blinkMenu = menu
@@ -1232,6 +1233,16 @@ extension SpaceController {
         }
         self.present(sheet, animated: true)
       }
+    }
+  }
+
+  /// Copies the whole buffer (scrollback and screen) to the clipboard.
+  @objc func copyAllAction() {
+    guard let termView = currentDevice?.view else {
+      return
+    }
+    termView.copyAllText { [weak self] lines in
+      self?._showNote(lines == 0 ? "Nothing to copy" : "Copied \(lines) \(lines == 1 ? "line" : "lines")")
     }
   }
 
