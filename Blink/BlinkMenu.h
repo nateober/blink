@@ -46,6 +46,8 @@ extern const BlinkActionID BlinkActionChangeLayout;
 extern const BlinkActionID BlinkActionToggleLayoutLock;
 extern const BlinkActionID BlinkActionToggleGeoTrack;
 extern const BlinkActionID BlinkActionOpenLink;
+extern const BlinkActionID BlinkActionCopyAll;
+extern const BlinkActionID BlinkActionSettings;
 extern const BlinkActionID BlinkActionToggleCompactActions;
 
 extern NSString * BLINK_ACTION_TOGGLE_PREFIX;

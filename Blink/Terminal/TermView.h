@@ -118,6 +118,7 @@ extern NSString * TermViewBrowserReadyNotificationKey;
 - (void)scrollToBottom;
 /// Selects everything in the terminal, scrollback included, for the next copy.
 - (void)selectAllText;
+- (void)copyAllText:(void (^)(NSInteger lines))completion;
 /// Links currently on screen, top to bottom (plain URLs and OSC 8 hyperlinks).
 - (void)visibleLinks:(void (^)(NSArray<NSString *> *links))completion;
 /// The link under a point in the terminal view, or nil.

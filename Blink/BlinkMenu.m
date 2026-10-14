@@ -45,6 +45,8 @@ const BlinkActionID BlinkActionChangeLayout = @"blink-change-layout";
 const BlinkActionID BlinkActionToggleLayoutLock = @"blink-toggle-layout-lock";
 const BlinkActionID BlinkActionToggleGeoTrack = @"blink-toggle-geo-track";
 const BlinkActionID BlinkActionOpenLink = @"blink-open-link";
+const BlinkActionID BlinkActionCopyAll = @"blink-copy-all";
+const BlinkActionID BlinkActionSettings = @"blink-settings";
 const BlinkActionID BlinkActionToggleCompactActions = @"blink-toggle-compact-actions";
 const BlinkActionID BlinkActionLayoutFill = @"blink-layout-fill";
 const BlinkActionID BlinkActionLayoutFit = @"blink-layout-fit";
@@ -325,6 +327,24 @@ const CGFloat MENU_PADDING = 10.0;
             image:[UIImage systemImageNamed:@"link"]
             identifier:elementID handler:^(__kindof UIAction * _Nonnull action) {
       [[delegate spaceController] openLinkAction];
+    }];
+  }
+
+  if (elementID == BlinkActionCopyAll) {
+    return [UIAction
+            actionWithTitle:noTitle ? @"" : @"Copy All"
+            image:[UIImage systemImageNamed:@"doc.on.doc"]
+            identifier:elementID handler:^(__kindof UIAction * _Nonnull action) {
+      [[delegate spaceController] copyAllAction];
+    }];
+  }
+
+  if (elementID == BlinkActionSettings) {
+    return [UIAction
+            actionWithTitle:noTitle ? @"" : @"Settings"
+            image:[UIImage systemImageNamed:@"gearshape"]
+            identifier:elementID handler:^(__kindof UIAction * _Nonnull action) {
+      [[delegate spaceController] showConfigAction];
     }];
   }
 

@@ -166,6 +166,11 @@ NSString *term_urlAtPoint(CGPoint point)
   return [NSString stringWithFormat:@"term_urlAtPoint(%@, %@);", @(point.x), @(point.y)];
 }
 
+NSString *term_bufferText(void)
+{
+  return @"term_bufferText();";
+}
+
 NSString *term_selectAll(void)
 {
   return @"term_selectAll();";
