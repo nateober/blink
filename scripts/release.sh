@@ -83,7 +83,12 @@ PATH=/usr/bin:/bin:/usr/sbin:/sbin:$PATH xcodebuild -exportArchive \
   -authenticationKeyID "$KEY_ID" \
   -authenticationKeyIssuerID "$ISSUER_ID" \
   > build/export.log 2>&1
-grep -qE "EXPORT SUCCEEDED" build/export.log && echo ">> Upload succeeded (build $BUILD_NUM)."
+if ! grep -qE "EXPORT SUCCEEDED" build/export.log; then
+  echo ">> Export/upload FAILED (build $BUILD_NUM); see build/export.log:" >&2
+  tail -20 build/export.log >&2
+  exit 1
+fi
+echo ">> Upload succeeded (build $BUILD_NUM)."
 
 echo ">> Waiting for ASC processing, then attaching to internal group…"
 uv run --quiet --with PyJWT --with cryptography --with requests --python 3.12 python - "$BUILD_NUM" <<PY
