@@ -103,3 +103,12 @@ while time.time() < deadline:
 else:
     print(">> Timed out waiting for processing; attach manually later.", file=sys.stderr)
 PY
+
+# Receipt to Nate's phone: one Catch push with the build, what changed (git log since the
+# last receipt) and what to try. Never fails the release. To say what to test, write
+# build/ship-notes.txt before releasing ("test: …", "known: …", "changed:" + lines); it is
+# renamed .sent once delivered. Only on a confirmed upload.
+if grep -q "EXPORT SUCCEEDED" build/export.log 2>/dev/null && [[ -x "$HOME/bin/ship-receipt" ]]; then
+  "$HOME/bin/ship-receipt" --app "Blink" --version "build $BUILD_NUM" --repo "$REPO" \
+    --notes "$REPO/build/ship-notes.txt" || true
+fi
