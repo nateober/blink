@@ -42,6 +42,8 @@ struct RunFleetCommandIntent: AppIntent {
   )
   // Runs the SSH work in-process (needs the app), not in a lightweight extension.
   static var openAppWhenRun: Bool = false
+  // Runs a command on a host: never from a locked phone.
+  static var authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
 
   @Parameter(title: "Host", description: "A host configured in Blink (e.g. ada).")
   var host: String
@@ -78,6 +80,8 @@ struct RunFleetScriptIntent: AppIntent {
     "Run a multi-line bash/python script on a configured Blink host over SSH and return its output."
   )
   static var openAppWhenRun: Bool = false
+  // Runs a command on a host: never from a locked phone.
+  static var authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
 
   @Parameter(title: "Host", description: "A host configured in Blink (e.g. ada).")
   var host: String

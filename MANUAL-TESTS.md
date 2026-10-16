@@ -96,9 +96,9 @@ Simulator-checked where it can be; these need the phone or iPad.
       below. Check with your own font too.
 - [ ] **Dark Mode theme:** Appearance → style → Dark Mode Theme; flip Control Center's Dark Mode and
       open terminals follow, including the margins.
-- [ ] **Session links:** Settings → Link Actions → on, Create Key. From Notes, tap
-      `blinkshell://host/ada?mosh=1&id=ada&key=<key>` → connects; tap again → returns to it.
-      A link without the key shows the command and asks.
+- [ ] **Session links:** Settings → Link Actions → on, sign `blinkshell://host/ada?mosh=1&id=ada`.
+      From Notes, tap the signed link → connects; tap again → returns to it. An unsigned link
+      shows the command and asks (signed links replaced the `key=` links in Feature H).
 - [ ] **Shortcuts:** "Open Terminal Session" with a host opens Blink connected; "Run Command on
       Host" returns output; an old "Run Fleet Command" shortcut still runs.
 - [ ] **Sessions bar:** Settings → Display → Sessions Bar. Tabs show live titles (Claude Code's
@@ -138,3 +138,22 @@ Simulator-checked where it can be; these need the phone or iPad.
 - [ ] Double-tap the Command SmartKey: the bar shows Snippets, Copy All, Settings, New, Close, then More.
 - [ ] In an ssh or mosh session with scrollback, Copy All: note "Copied N lines"; paste elsewhere has the whole buffer, scrollback included.
 - [ ] Settings opens settings over a live remote session; closing it returns to the session still connected.
+
+## Feature H: review fixes (build after 1122)
+
+- [ ] **Fleet on bash hosts:** a Shortcut "Run Command on Host" against lightsail (bash) returns
+      the output; `false` reports "command exited 1", not success.
+- [ ] **Scripts that read stdin:** "Run Script on Host" with `cat` on one line and `echo after` on
+      the next prints `after` and finishes at once instead of after 30 s.
+- [ ] **Locked phone:** lock the phone, ask Siri to run a Blink command: it asks you to unlock first.
+- [ ] **App lock:** with Settings → Auto Lock on and the app locked, tap a session link: nothing
+      happens until Face ID; after unlocking the session opens (or the confirmation appears).
+- [ ] **Signed links:** Settings → Link Actions → Sign a Link. The signed link runs without asking;
+      edit any character of its cmd and it asks. Old `key=` links now ask. Replace Signing Key makes
+      every earlier signed link ask.
+- [ ] **Confirmation:** an unsigned link shows the command in monospace and Return cancels. A link
+      with a run of spaces in its command is refused with a note.
+- [ ] **Dictation and the lock button:** start dictating, lock the phone mid-sentence, unlock:
+      the words are typed into the tab you started in.
+- [ ] **Scrolled up under a prompt theme:** scroll up in a shell whose prompt queries the terminal
+      (or run vim): the view stays where you put it until you type.

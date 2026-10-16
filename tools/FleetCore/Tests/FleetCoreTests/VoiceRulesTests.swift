@@ -81,3 +81,37 @@ final class VoiceRulesTests: XCTestCase {
     XCTAssertEqual(VoiceInsert.hex("don’t"), "646f6ee2809974")
   }
 }
+
+final class VoiceDeliveryTests: XCTestCase {
+  final class Tab {}
+
+  func testWordsGoToTheTabDictationStartedIn() {
+    let started = Tab()
+    var d = VoiceDelivery<Tab>()
+    d.started(in: started)
+    let out = d.finished("ls -la", active: true)
+    XCTAssertEqual(out?.text, "ls -la")
+    XCTAssertTrue(out?.target === started)
+  }
+
+  // Locking the phone mid-dictation used to drop the words.
+  func testWordsFinishedInTheBackgroundAreTypedOnReturn() {
+    let tab = Tab()
+    var d = VoiceDelivery<Tab>()
+    d.started(in: tab)
+    XCTAssertNil(d.finished("git status", active: false))
+    let out = d.activated()
+    XCTAssertEqual(out?.text, "git status")
+    XCTAssertTrue(out?.target === tab)
+    XCTAssertNil(d.activated(), "typed once only")
+  }
+
+  func testWordsForAClosedTabAreDropped() {
+    var d = VoiceDelivery<Tab>()
+    var tab: Tab? = Tab()
+    d.started(in: tab!)
+    XCTAssertNil(d.finished("echo hi", active: false))
+    tab = nil
+    XCTAssertNil(d.activated())
+  }
+}

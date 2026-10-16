@@ -68,6 +68,7 @@ class SpaceController: UIViewController {
   private lazy var _voice: VoiceDictation = _makeVoice()
   private let _voiceStrip = VoiceStripView()
   private var _micPress = MicInteraction()
+  private var _voiceDelivery = VoiceDelivery<TermDevice>()
   private var _spaceControllerAnimating: Bool = false
   var stuckKeyCode: KeyCode? = nil
   
@@ -300,14 +301,26 @@ class SpaceController: UIViewController {
     voice.onFinish = { [weak self] text in
       guard let self else { return }
       self._micPress.reset()
-      guard let text, self.foregroundActive,
-            let input = self.currentDevice?.view?.browserView ?? self.currentDevice?.view?.webView
+      // Into the tab dictation started in; held for later if the app went to the background.
+      guard let text, let out = self._voiceDelivery.finished(text, active: self.foregroundActive)
       else { return }
-      // Typed, not pasted: the same raw-input path the SmartKeys use, so the words land
-      // wherever the cursor is (shell, vim, a Claude Code prompt) with no bracketed paste.
-      input.reportHex(VoiceInsert.hex(text))
+      self._typeDictation(out.text, into: out.target)
     }
     return voice
+  }
+
+  private func _typeDictation(_ text: String, into device: TermDevice) {
+    guard let input = device.view?.browserView ?? device.view?.webView else { return }
+    // Typed, not pasted: the same raw-input path the SmartKeys use, so the words land
+    // wherever the cursor is (shell, vim, a Claude Code prompt) with no bracketed paste.
+    input.reportHex(VoiceInsert.hex(text))
+  }
+
+  @objc private func _typeHeldDictation(_ n: Notification) {
+    guard let scene = n.object as? UIWindowScene, view.window?.windowScene === scene,
+          let out = _voiceDelivery.activated()
+    else { return }
+    _typeDictation(out.text, into: out.target)
   }
 
   /// The mic key on the SmartKeys bar: hold to talk (release stops), or tap to start and
@@ -315,7 +328,9 @@ class SpaceController: UIViewController {
   func voiceKey(down: Bool) {
     let now = Date()
     switch down ? _micPress.down(at: now) : _micPress.up(at: now) {
-    case .start: _voice.start()
+    case .start:
+      _voiceDelivery.started(in: currentDevice)
+      _voice.start()
     case .stop: _voice.stop()
     case .none: break
     }
@@ -468,6 +483,9 @@ Please go to your subscriptions and cancel one of them!
     
     nc.addObserver(self, selector: #selector(_UISceneWillEnterForegroundNotification(_:)),
                    name: UIScene.willEnterForegroundNotification, object: nil)
+
+    nc.addObserver(self, selector: #selector(_typeHeldDictation(_:)),
+                   name: UIScene.didActivateNotification, object: nil)
 
   }
                    
@@ -1495,11 +1513,13 @@ extension SpaceController {
       link: link,
       sessionExists: existing != nil,
       enabled: LinkActionsSettings.isEnabled,
-      userKey: LinkActionsSettings.userKey)
+      signingKey: LinkActionsSettings.signingKey)
 
     switch decision {
     case .refuse:
       showAlert(msg: "A link tried to open a session. Link actions are off; turn them on in Settings > Link Actions.")
+    case .refuseUnreadable:
+      showAlert(msg: "A link tried to run a command with spacing that could hide part of it, so Blink ignored it. Sign the link in Settings > Link Actions if you wrote it.")
     case .run:
       _runSessionLink(link, existing: existing)
     case .confirm:
@@ -1507,10 +1527,21 @@ extension SpaceController {
         title: "Run this command?",
         message: "A link wants to open a session and run:\n\n\(link.command)",
         preferredStyle: .alert)
-      alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+      // Monospaced, so the command reads exactly as it will run.
+      let message = NSMutableAttributedString(
+        string: "A link wants to open a session and run:\n\n",
+        attributes: [.font: UIFont.preferredFont(forTextStyle: .footnote)])
+      message.append(NSAttributedString(
+        string: link.command,
+        attributes: [.font: UIFont.monospacedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .footnote).pointSize, weight: .regular)]))
+      alert.setValue(message, forKey: "attributedMessage")
+      let cancel = UIAlertAction(title: "Cancel", style: .cancel)
+      alert.addAction(cancel)
       alert.addAction(UIAlertAction(title: "Run", style: .default) { [weak self] _ in
         self?._runSessionLink(link, existing: nil)
       })
+      // Return or a stray tap cancels; running takes a deliberate tap on Run.
+      alert.preferredAction = cancel
       present(alert, animated: true)
     }
   }

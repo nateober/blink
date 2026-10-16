@@ -130,6 +130,8 @@ struct RunCommandOnHostIntent: AppIntent {
     categoryName: "Hosts"
   )
   static var openAppWhenRun: Bool = false
+  // Runs a command on a host: never from a locked phone.
+  static var authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
 
   @Parameter(title: "Host")
   var host: BlinkHostEntity
@@ -165,6 +167,8 @@ struct RunScriptOnHostIntent: AppIntent {
     categoryName: "Hosts"
   )
   static var openAppWhenRun: Bool = false
+  // Runs a command on a host: never from a locked phone.
+  static var authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
 
   @Parameter(title: "Host")
   var host: BlinkHostEntity
@@ -231,6 +235,7 @@ struct OpenTerminalSessionIntent: AppIntent {
     categoryName: "Sessions"
   )
   static var openAppWhenRun: Bool = true
+  static var authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
 
   @Parameter(title: "Host")
   var host: BlinkHostEntity?
@@ -289,8 +294,9 @@ struct OpenTerminalSessionIntent: AppIntent {
     for _ in 0..<40 {
       if let scene = UIApplication.shared.connectedScenes.activeAppScene(),
          let delegate = scene.delegate as? SceneDelegate {
-        // A shortcut is something the user built and chose to run, so it needs no link key.
-        delegate.spaceController.openSession(for: link)
+        // A shortcut is something the user built and chose to run, so it needs no signature.
+        // It still waits behind the app lock.
+        delegate.deliverSessionLink(link, trusted: true)
         return .result()
       }
       try await Task.sleep(nanoseconds: 100_000_000)
