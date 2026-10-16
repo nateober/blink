@@ -55,7 +55,12 @@ public func fleetexec_main(argc: Int32, argv: Argv) -> Int32 {
       let r = try await HeadlessSSHRunner.run(alias: host, command: command, acceptUnknownHostKeys: true)
       outText = r.stdout
       errText = r.stderr
-      exit = r.exitCode ?? 0
+      if let code = r.exitCode {
+        exit = code
+      } else {
+        errText += (errText.isEmpty ? "" : "\n") + "fleetexec: the command ended without an exit status"
+        exit = 255
+      }
     } catch {
       failure = (error as? LocalizedError)?.errorDescription ?? "\(error)"
     }

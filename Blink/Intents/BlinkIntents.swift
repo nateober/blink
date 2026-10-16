@@ -100,10 +100,15 @@ enum HostActionRunner {
       let result = try await HeadlessSSHRunner.run(
         alias: host, command: command, acceptUnknownHostKeys: trustNewHostKey
       )
-      if let code = result.exitCode, code != 0 {
-        let detail = result.stderr.isEmpty ? result.stdout : result.stderr
-        let trimmed = detail.trimmingCharacters(in: .whitespacesAndNewlines)
-        throw FleetIntentError.runFailed("\(what) exited \(code)" + (trimmed.isEmpty ? "" : ": \(trimmed)"))
+      let detail = (result.stderr.isEmpty ? result.stdout : result.stderr)
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+      guard let code = result.exitCode else {
+        // No trailer means the remote shell never got to report: a syntax error, a dropped
+        // connection, or a shell that rejected the command. Not a success.
+        throw FleetIntentError.runFailed("\(what) ended without an exit status" + (detail.isEmpty ? "" : ": \(detail)"))
+      }
+      if code != 0 {
+        throw FleetIntentError.runFailed("\(what) exited \(code)" + (detail.isEmpty ? "" : ": \(detail)"))
       }
       return result.stdout.isEmpty ? "(no output)" : result.stdout
     } catch let e as FleetIntentError {
@@ -125,6 +130,8 @@ struct RunCommandOnHostIntent: AppIntent {
     categoryName: "Hosts"
   )
   static var openAppWhenRun: Bool = false
+  // Runs a command on a host: never from a locked phone.
+  static var authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
 
   @Parameter(title: "Host")
   var host: BlinkHostEntity
@@ -160,6 +167,8 @@ struct RunScriptOnHostIntent: AppIntent {
     categoryName: "Hosts"
   )
   static var openAppWhenRun: Bool = false
+  // Runs a command on a host: never from a locked phone.
+  static var authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
 
   @Parameter(title: "Host")
   var host: BlinkHostEntity
@@ -226,6 +235,7 @@ struct OpenTerminalSessionIntent: AppIntent {
     categoryName: "Sessions"
   )
   static var openAppWhenRun: Bool = true
+  static var authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
 
   @Parameter(title: "Host")
   var host: BlinkHostEntity?
@@ -284,8 +294,9 @@ struct OpenTerminalSessionIntent: AppIntent {
     for _ in 0..<40 {
       if let scene = UIApplication.shared.connectedScenes.activeAppScene(),
          let delegate = scene.delegate as? SceneDelegate {
-        // A shortcut is something the user built and chose to run, so it needs no link key.
-        delegate.spaceController.openSession(for: link)
+        // A shortcut is something the user built and chose to run, so it needs no signature.
+        // It still waits behind the app lock.
+        delegate.deliverSessionLink(link, trusted: true)
         return .result()
       }
       try await Task.sleep(nanoseconds: 100_000_000)

@@ -4,7 +4,49 @@ import XCTest
 final class ExitTrailerTests: XCTestCase {
   func testWrapAppendsTrailer() {
     XCTAssertEqual(ExitTrailer.wrap("uptime"),
-                   "{ uptime\n; } ; printf '\\n__BLINK_EXIT_%d__\\n' \"$?\"")
+                   "( uptime\n) </dev/null; printf '\\n__BLINK_EXIT_%d__\\n' \"$?\"")
+  }
+
+  // The wrapped command must parse and report $? under every fleet login shell, not just
+  // zsh (bash and sh rejected the old `\n; }` form as a syntax error).
+  func testWrapRunsUnderBashShAndZsh() throws {
+    for shell in ["/bin/bash", "/bin/sh", "/bin/zsh"] {
+      let out = try runShell(shell, ExitTrailer.wrap("echo hi; false"))
+      let r = ExitTrailer.parse(out)
+      XCTAssertEqual(r.exitCode, 1, "\(shell): \(out)")
+      XCTAssertEqual(r.output.trimmingCharacters(in: .newlines), "hi", shell)
+    }
+  }
+
+  // `exit` or `exec` in the command must not take the trailer down with it.
+  func testExitInTheCommandStillReportsItsCode() throws {
+    for shell in ["/bin/bash", "/bin/sh", "/bin/zsh"] {
+      XCTAssertEqual(ExitTrailer.parse(try runShell(shell, ExitTrailer.wrap("echo a && exit 3"))).exitCode, 3, shell)
+      XCTAssertEqual(ExitTrailer.parse(try runShell(shell, ExitTrailer.wrap("exec true"))).exitCode, 0, shell)
+    }
+  }
+
+  // A command that reads stdin must see EOF, not wait on the channel until the timeout.
+  func testWrapGivesCommandEmptyStdin() throws {
+    for shell in ["/bin/bash", "/bin/sh", "/bin/zsh"] {
+      let out = try runShell(shell, ExitTrailer.wrap("cat; echo done"), stdinOpen: true)
+      XCTAssertEqual(ExitTrailer.parse(out).output.trimmingCharacters(in: .newlines), "done", shell)
+    }
+  }
+
+  private func runShell(_ shell: String, _ command: String, stdinOpen: Bool = false) throws -> String {
+    let p = Process()
+    p.executableURL = URL(fileURLWithPath: shell)
+    p.arguments = ["-c", command]
+    let out = Pipe()
+    p.standardOutput = out
+    let input = Pipe()  // kept open: a reader would block forever without the redirect
+    if stdinOpen { p.standardInput = input }
+    try p.run()
+    let deadline = Date().addingTimeInterval(5)
+    while p.isRunning && Date() < deadline { usleep(20_000) }
+    if p.isRunning { p.terminate(); XCTFail("\(shell) hung reading stdin") }
+    return String(decoding: out.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
   }
   func testParseSuccess() {
     let r = ExitTrailer.parse("hello\n__BLINK_EXIT_0__\n")

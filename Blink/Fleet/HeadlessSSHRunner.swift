@@ -21,7 +21,7 @@ public struct HeadlessSSHResult: Sendable {
   public let stdout: String
   public let stderr: String
   public let exitCode: Int32?   // nil = could not be determined
-  public var exitOK: Bool { (exitCode ?? 0) == 0 }
+  public var exitOK: Bool { exitCode == 0 }   // unknown is not success
 }
 
 public enum HeadlessSSHError: Error, LocalizedError {

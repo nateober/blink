@@ -325,6 +325,9 @@ extension SmarterTermInput {
         return
     }
     
+    // Typing while scrolled up returns the view to the prompt. Only here, on real input:
+    // the terminal's own replies (cursor and colour queries) also reach device.write.
+    deviceView.scrollToBottom()
     deviceView.displayInput(data)
     
     device.write(data)

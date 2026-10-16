@@ -123,3 +123,33 @@ public enum VoiceInsert {
     s.utf8.map { String(format: "%02x", $0) }.joined()
   }
 }
+
+/// Where finished words go. They are typed into the tab dictation started in, and if the app
+/// was in the background when they arrived (the phone locked mid-sentence) they wait and are
+/// typed when it comes back. Words for a tab that has since closed are dropped.
+public struct VoiceDelivery<Target: AnyObject> {
+  private weak var target: Target?
+  private var held: String?
+
+  public init() {}
+
+  public mutating func started(in target: Target?) {
+    self.target = target
+    held = nil
+  }
+
+  /// The words and their tab to type now, or nil when they are held or have nowhere to go.
+  public mutating func finished(_ text: String, active: Bool) -> (text: String, target: Target)? {
+    guard let target else { return nil }
+    if active { return (text, target) }
+    held = held.map { $0 + " " + text } ?? text
+    return nil
+  }
+
+  /// Held words to type now that the app is back, once.
+  public mutating func activated() -> (text: String, target: Target)? {
+    defer { held = nil }
+    guard let held, let target else { return nil }
+    return (held, target)
+  }
+}

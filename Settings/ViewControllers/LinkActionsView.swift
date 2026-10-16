@@ -29,27 +29,71 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
+import Security
+import UIKit
 import SwiftUI
 
 /// Where the `blinkshell://` link settings live. Off until the user turns them on.
 enum LinkActionsSettings {
   private static let enabledKey = "LinkActionsEnabled"
-  private static let userKeyKey = "LinkActionsKey"
+  private static let legacyKeyKey = "LinkActionsKey"
+  private static let keychainService = "com.obercode.blink.link-actions"
 
   static var isEnabled: Bool {
     get { UserDefaults.standard.bool(forKey: enabledKey) }
     set { UserDefaults.standard.set(newValue, forKey: enabledKey) }
   }
 
-  static var userKey: String {
-    get { UserDefaults.standard.string(forKey: userKeyKey) ?? "" }
-    set { UserDefaults.standard.set(newValue, forKey: userKeyKey) }
+  /// The key links are signed with. Kept in this device's Keychain, never synced or shown.
+  static var signingKey: Data? { readSigningKey().key }
+
+  private static func readSigningKey() -> (key: Data?, status: OSStatus) {
+    // The old plain key lived in UserDefaults and was copied to the shared clipboard, so it
+    // is dropped rather than carried over.
+    if UserDefaults.standard.object(forKey: legacyKeyKey) != nil {
+      UserDefaults.standard.removeObject(forKey: legacyKeyKey)
+    }
+    var query = baseQuery
+    query[kSecReturnData as String] = true
+    query[kSecMatchLimit as String] = kSecMatchLimitOne
+    var item: CFTypeRef?
+    let status = SecItemCopyMatching(query as CFDictionary, &item)
+    return (status == errSecSuccess ? item as? Data : nil, status)
+  }
+
+  /// The signing key, made on first use. Any other Keychain error leaves the stored key alone,
+  /// so a passing failure can't rotate it and void every signed link.
+  static func signingKeyCreatingIfNeeded() -> Data? {
+    let read = readSigningKey()
+    if let key = read.key { return key }
+    return read.status == errSecItemNotFound ? replaceSigningKey() : nil
+  }
+
+  /// A new key. Every link signed with the old one stops running without asking.
+  @discardableResult
+  static func replaceSigningKey() -> Data? {
+    SecItemDelete(baseQuery as CFDictionary)
+    let key = SessionLinkPolicy.makeKey()
+    var add = baseQuery
+    add[kSecValueData as String] = key
+    add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+    return SecItemAdd(add as CFDictionary, nil) == errSecSuccess ? key : nil
+  }
+
+  private static var baseQuery: [String: Any] {
+    [kSecClass as String: kSecClassGenericPassword,
+     kSecAttrService as String: keychainService,
+     kSecAttrAccount as String: "signing-key",
+     kSecAttrSynchronizable as String: false]
   }
 }
 
 struct LinkActionsView: View {
   @State private var enabled = LinkActionsSettings.isEnabled
-  @State private var key = LinkActionsSettings.userKey
+  @State private var linkToSign = ""
+  @State private var signed = ""
+  @State private var signError = ""
+  @State private var confirmReplace = false
 
   var body: some View {
     List {
@@ -62,41 +106,44 @@ struct LinkActionsView: View {
 
       if enabled {
         Section {
-          HStack {
-            Text(key.isEmpty ? "No key" : key)
-              .font(.system(.body, design: .monospaced))
-              .foregroundColor(key.isEmpty ? .secondary : .primary)
+          TextField("blinkshell://host/myserver?id=work", text: $linkToSign)
+            .font(.system(.body, design: .monospaced))
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .onChange(of: linkToSign) { _ in signed = ""; signError = "" }
+          Button("Sign and Copy") { sign() }
+            .disabled(linkToSign.trimmingCharacters(in: .whitespaces).isEmpty)
+          if !signed.isEmpty {
+            Text(signed)
+              .font(.system(.footnote, design: .monospaced))
               .textSelection(.enabled)
-            Spacer()
-            if !key.isEmpty {
-              Button {
-                UIPasteboard.general.string = key
-              } label: {
-                Image(systemName: "doc.on.doc")
-              }
-              .buttonStyle(.borderless)
-            }
+            Text("Copied.").foregroundColor(.secondary)
           }
-          Button(key.isEmpty ? "Create Key" : "Replace Key") {
-            key = SessionLinkPolicy.makeKey()
-            LinkActionsSettings.userKey = key
-          }
-          if !key.isEmpty {
-            Button("Remove Key", role: .destructive) {
-              key = ""
-              LinkActionsSettings.userKey = ""
-            }
+          if !signError.isEmpty {
+            Text(signError).foregroundColor(.red)
           }
         } header: {
-          Text("Your Key")
+          Text("Sign a Link")
         } footer: {
-          Text("A link that carries your key runs its command without asking. Any other link shows the command first and waits for you. Put the key only in links you write yourself.")
+          Text("A signed link runs its command without asking. The signature covers the whole link, so it can't be changed to run anything else. Any other link shows the command first and waits for you. The key that signs links never leaves this device.")
+        }
+
+        Section {
+          Button("Replace Signing Key", role: .destructive) { confirmReplace = true }
+        } footer: {
+          Text("Every link signed so far will ask before it runs.")
+        }
+        .confirmationDialog("Replace the signing key?", isPresented: $confirmReplace, titleVisibility: .visible) {
+          Button("Replace Key", role: .destructive) {
+            LinkActionsSettings.replaceSigningKey()
+            signed = ""
+          }
         }
 
         Section("Examples") {
           example("Connect to a host", "blinkshell://host/myserver")
-          example("Run a command", "blinkshell://run?cmd=ssh%20-t%20myserver%20tmux%20attach" + keySuffix)
-          example("Open once, then return to it", "blinkshell://host/myserver?mosh=1&id=work" + keySuffix)
+          example("Run a command", "blinkshell://run?cmd=ssh%20-t%20myserver%20tmux%20attach")
+          example("Open once, then return to it", "blinkshell://host/myserver?mosh=1&id=work")
           example("Go back to a session", "blinkshell://focus?id=work")
         }
       }
@@ -105,7 +152,34 @@ struct LinkActionsView: View {
     .navigationTitle("Link Actions")
   }
 
-  private var keySuffix: String { key.isEmpty ? "" : "&key=\(key)" }
+  private func sign() {
+    signed = ""
+    signError = ""
+    guard let url = URL(string: linkToSign.trimmingCharacters(in: .whitespaces)) else {
+      signError = "That isn't a link."
+      return
+    }
+    guard let key = LinkActionsSettings.signingKeyCreatingIfNeeded() else {
+      signError = "Blink couldn't save a signing key."
+      return
+    }
+    switch SessionLink.signedURL(url, key: key) {
+    case .success(let result):
+      signed = result.absoluteString
+      // Only this device's clipboard: the link stays local until it is pasted somewhere.
+      UIPasteboard.general.setItems([[UIPasteboard.typeAutomatic: signed]], options: [.localOnly: true])
+    case .failure(.notASessionLink):
+      signError = "Only blinkshell://run, host and focus links can be signed."
+    case .failure(.missingCommand):
+      signError = "A run link needs a cmd."
+    case .failure(.badCommand):
+      signError = "The command has a line break, a control or invisible character, or is too long."
+    case .failure(.badHost):
+      signError = "The host is not a plain host name."
+    case .failure(.badID):
+      signError = "The id may only use letters, digits, dot, dash and underscore."
+    }
+  }
 
   private func example(_ title: String, _ link: String) -> some View {
     VStack(alignment: .leading, spacing: 4) {
