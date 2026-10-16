@@ -100,10 +100,15 @@ enum HostActionRunner {
       let result = try await HeadlessSSHRunner.run(
         alias: host, command: command, acceptUnknownHostKeys: trustNewHostKey
       )
-      if let code = result.exitCode, code != 0 {
-        let detail = result.stderr.isEmpty ? result.stdout : result.stderr
-        let trimmed = detail.trimmingCharacters(in: .whitespacesAndNewlines)
-        throw FleetIntentError.runFailed("\(what) exited \(code)" + (trimmed.isEmpty ? "" : ": \(trimmed)"))
+      let detail = (result.stderr.isEmpty ? result.stdout : result.stderr)
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+      guard let code = result.exitCode else {
+        // No trailer means the remote shell never got to report: a syntax error, a dropped
+        // connection, or a shell that rejected the command. Not a success.
+        throw FleetIntentError.runFailed("\(what) ended without an exit status" + (detail.isEmpty ? "" : ": \(detail)"))
+      }
+      if code != 0 {
+        throw FleetIntentError.runFailed("\(what) exited \(code)" + (detail.isEmpty ? "" : ": \(detail)"))
       }
       return result.stdout.isEmpty ? "(no output)" : result.stdout
     } catch let e as FleetIntentError {
