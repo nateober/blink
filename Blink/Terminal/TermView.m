@@ -903,6 +903,7 @@ static NSString * _sanitizeTextForClipboard(NSString *text);
 {
   NSString *str = _selectedText;
   if (str) {
+    [self scrollToBottom];  // pasting is typing: back to the prompt
     [_webView evaluateJavaScript:term_paste(str) completionHandler:nil];
   }
   [self cleanSelection];
@@ -968,6 +969,7 @@ static NSString * _sanitizeTextForClipboard(NSString *text) {
 {
   NSString *str = [UIPasteboard generalPasteboard].string;
   if (str) {
+    [self scrollToBottom];
     if (_browserView) {
       [_browserView evaluateJavaScript:term_paste(str) completionHandler:nil];
     } else {
@@ -980,6 +982,7 @@ static NSString * _sanitizeTextForClipboard(NSString *text) {
 
 - (void)pasteString:(NSString *)str {
   if (str) {
+    [self scrollToBottom];
     if (_browserView) {
       [_browserView evaluateJavaScript:term_paste(str) completionHandler:nil];
     } else {

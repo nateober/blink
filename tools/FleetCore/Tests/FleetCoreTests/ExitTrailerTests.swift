@@ -4,7 +4,7 @@ import XCTest
 final class ExitTrailerTests: XCTestCase {
   func testWrapAppendsTrailer() {
     XCTAssertEqual(ExitTrailer.wrap("uptime"),
-                   "{ uptime\n} </dev/null; printf '\\n__BLINK_EXIT_%d__\\n' \"$?\"")
+                   "( uptime\n) </dev/null; printf '\\n__BLINK_EXIT_%d__\\n' \"$?\"")
   }
 
   // The wrapped command must parse and report $? under every fleet login shell, not just
@@ -15,6 +15,14 @@ final class ExitTrailerTests: XCTestCase {
       let r = ExitTrailer.parse(out)
       XCTAssertEqual(r.exitCode, 1, "\(shell): \(out)")
       XCTAssertEqual(r.output.trimmingCharacters(in: .newlines), "hi", shell)
+    }
+  }
+
+  // `exit` or `exec` in the command must not take the trailer down with it.
+  func testExitInTheCommandStillReportsItsCode() throws {
+    for shell in ["/bin/bash", "/bin/sh", "/bin/zsh"] {
+      XCTAssertEqual(ExitTrailer.parse(try runShell(shell, ExitTrailer.wrap("echo a && exit 3"))).exitCode, 3, shell)
+      XCTAssertEqual(ExitTrailer.parse(try runShell(shell, ExitTrailer.wrap("exec true"))).exitCode, 0, shell)
     }
   }
 

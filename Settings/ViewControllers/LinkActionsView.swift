@@ -45,7 +45,9 @@ enum LinkActionsSettings {
   }
 
   /// The key links are signed with. Kept in this device's Keychain, never synced or shown.
-  static var signingKey: Data? {
+  static var signingKey: Data? { readSigningKey().key }
+
+  private static func readSigningKey() -> (key: Data?, status: OSStatus) {
     // The old plain key lived in UserDefaults and was copied to the shared clipboard, so it
     // is dropped rather than carried over.
     if UserDefaults.standard.object(forKey: legacyKeyKey) != nil {
@@ -55,14 +57,16 @@ enum LinkActionsSettings {
     query[kSecReturnData as String] = true
     query[kSecMatchLimit as String] = kSecMatchLimitOne
     var item: CFTypeRef?
-    guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess else { return nil }
-    return item as? Data
+    let status = SecItemCopyMatching(query as CFDictionary, &item)
+    return (status == errSecSuccess ? item as? Data : nil, status)
   }
 
-  /// The signing key, made on first use.
+  /// The signing key, made on first use. Any other Keychain error leaves the stored key alone,
+  /// so a passing failure can't rotate it and void every signed link.
   static func signingKeyCreatingIfNeeded() -> Data? {
-    if let key = signingKey { return key }
-    return replaceSigningKey()
+    let read = readSigningKey()
+    if let key = read.key { return key }
+    return read.status == errSecItemNotFound ? replaceSigningKey() : nil
   }
 
   /// A new key. Every link signed with the old one stops running without asking.

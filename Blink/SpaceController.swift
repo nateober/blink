@@ -310,7 +310,10 @@ class SpaceController: UIViewController {
   }
 
   private func _typeDictation(_ text: String, into device: TermDevice) {
-    guard let input = device.view?.browserView ?? device.view?.webView else { return }
+    // A tab that has left the window (switched away, or unloaded in the background) can't
+    // take input; the words go to the tab on screen rather than nowhere.
+    let target = device.view?.window != nil ? device : currentDevice
+    guard let input = target?.view?.browserView ?? target?.view?.webView else { return }
     // Typed, not pasted: the same raw-input path the SmartKeys use, so the words land
     // wherever the cursor is (shell, vim, a Claude Code prompt) with no bracketed paste.
     input.reportHex(VoiceInsert.hex(text))

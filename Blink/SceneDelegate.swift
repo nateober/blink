@@ -92,7 +92,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
   private var _lockCtrl: UIViewController? = nil
   /// A session link or Shortcut that arrived while the app lock was up. It runs once the
   /// user unlocks, never before. `trusted` is set for Shortcuts the user built.
-  private var _pendingSessionLink: (link: SessionLink, trusted: Bool)? = nil
+  /// Held for a minute at most: a link the user walked away from must not run hours later.
+  private var _pendingSessionLink: (link: SessionLink, trusted: Bool, at: Date)? = nil
   private var _spCtrl = SpaceController()
   private var paywallWindow: UIWindow? = nil
 
@@ -339,7 +340,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     if let pending = _pendingSessionLink {
       _pendingSessionLink = nil
-      DispatchQueue.main.async { self.deliverSessionLink(pending.link, trusted: pending.trusted) }
+      if Date().timeIntervalSince(pending.at) < 60 {
+        DispatchQueue.main.async { self.deliverSessionLink(pending.link, trusted: pending.trusted) }
+      }
     }
 
     guard let term = spCtrl.currentTerm() else {
@@ -478,7 +481,7 @@ extension SceneDelegate {
   /// Opens a session link now, or holds it until the app lock is cleared.
   func deliverSessionLink(_ link: SessionLink, trusted: Bool) {
     if LocalAuth.shared.lockRequired || _lockCtrl != nil {
-      _pendingSessionLink = (link, trusted)
+      _pendingSessionLink = (link, trusted, Date())
       return
     }
     if trusted {

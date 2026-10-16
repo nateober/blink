@@ -11,10 +11,11 @@ public enum ExitTrailer {
 
   /// Wrap a user command so its exit status is emitted on its own trailing line.
   /// Works in POSIX sh / bash / zsh (Nate's fleet shells); bash and sh reject a `;` straight
-  /// after a newline, so the group closes on the newline alone. The exec channel never sends
-  /// EOF, so stdin comes from /dev/null: a command that reads it finishes instead of hanging.
+  /// after a newline, so the group closes on the newline alone. A subshell, so an `exit` or
+  /// `exec` in the command can't end the shell before the trailer prints. The exec channel
+  /// never sends EOF, so stdin comes from /dev/null: a reader finishes instead of hanging.
   public static func wrap(_ command: String) -> String {
-    "{ \(command)\n} </dev/null; printf '\\n\(prefix)%d\(suffix)\\n' \"$?\""
+    "( \(command)\n) </dev/null; printf '\\n\(prefix)%d\(suffix)\\n' \"$?\""
   }
 
   public struct Result: Equatable {
