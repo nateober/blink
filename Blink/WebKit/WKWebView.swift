@@ -95,6 +95,7 @@ class UIScrollViewWithoutHitTest: UIScrollView {
   private let _jsScrollerPath: String
   private let _handlerName: String
   private var _scrollReportInFlight = false
+  private var _scrollReportSentAt: CFTimeInterval = 0
   private var _pendingScrollReport: CGPoint? = nil
   private let _1fTapRecognizer = UITapGestureRecognizer()
   private let _1fPanRecognizer = UIPanGestureRecognizer()
@@ -453,8 +454,11 @@ extension WKWebViewGesturesInteraction: UIScrollViewDelegate {
   /// page then gets the latest position instead of a growing queue of old ones.
   private func _reportScroll(_ offset: CGPoint) {
     _pendingScrollReport = offset
-    guard !_scrollReportInFlight, let webView = _wkWebView else { return }
+    // A report whose answer never comes must not stop every later one.
+    let stuck = _scrollReportInFlight && CACurrentMediaTime() - _scrollReportSentAt > 1
+    guard !_scrollReportInFlight || stuck, let webView = _wkWebView else { return }
     _scrollReportInFlight = true
+    _scrollReportSentAt = CACurrentMediaTime()
     _pendingScrollReport = nil
     webView.evaluateJavaScript("\(_jsScrollerPath).reportScroll(\(offset.x), \(offset.y));") { [weak self] _, _ in
       guard let self else { return }
