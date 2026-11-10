@@ -1,3 +1,16 @@
+# Live Activity
+
+**Done 2026-11-10:** the widget-extension target exists (`BlinkWidgets`, added by
+`tools/add_widget_target.py`, which is safe to run again), and a fleet host can start, update
+and end the activity by push. `scripts/fleet/blink_fleet.py` (`blink-activity`) keeps it in
+line with what the agents on Ada are doing: "running", "needs input", gone when idle. The app
+publishes two tokens to `~/.blink-notify/` on Ada: `activity-start-token` (iOS 17.2+, starts
+one) and `activity-token` (updates the one showing). Tapping the activity opens Sessions.
+
+The steps below are the original hand-made route, kept for reference.
+
+---
+
 # Live Activity — one-time Xcode setup
 
 All the code is written. To light up the lock-screen / Dynamic Island indicator, add a

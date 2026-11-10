@@ -174,3 +174,56 @@ Simulator-checked where it can be; these need the phone or iPad.
 - [ ] **No stale frame on return (build 1125):** in mosh + tmux with the keyboard up, switch away
       and back: the tmux status line and current rows are there from the first moment, with no
       flash of older rows.
+
+## Feature J: agent pushes and the tap (build after 1125)
+
+Host side is installed on Ada (holds the key) and Jarvis (relays through Ada); Max needs
+`scripts/fleet/install-agent-loop.sh --relay ada.ober` when it is next online. Claude Code
+sessions started before the install don't have the hooks; restart one to test.
+
+- [ ] **Needs input rings:** in a Claude Code session in tmux, ask for something that needs a
+      permission, then leave Blink. A push arrives titled "<session> needs you".
+- [ ] **The tap lands:** tap it. Blink opens on the tab attached to that tmux session. With no
+      tab attached, a new tab opens and attaches (`mosh <host> -- blink-attach ...`).
+- [ ] **Finishing is quiet:** let a turn finish while away. No sound or banner; one entry per
+      session in Notification Center, and in `notiflog`.
+- [ ] **Not while watching:** with the session on screen, a permission prompt shows no banner.
+- [ ] **Window titles:** tab titles read `ada › main › zsh › ...` (set by `tm`).
+
+## Feature K: Paste Image
+
+- [ ] Copy a screenshot, open the quick actions (double-tap Command), tap Paste Image in a tmux
+      tab on a fleet host: "Sending image to ada", then a path under `~/Scratch/blink-paste/`
+      appears at the cursor and Claude Code reads the image.
+- [ ] With an image and no text on the clipboard, the edit menu's Paste does the same.
+- [ ] In the local `blink>` shell it says it needs a tmux session on a fleet host.
+
+## Feature L: dictation into an agent
+
+- [ ] With Claude Code in front, dictate: the compose area opens in Prompt mode holding the
+      words; send it and it reaches the prompt.
+- [ ] At a shell prompt, or in vim, dictation still types at the cursor.
+- [ ] Settings > Agents > "Dictate into the compose area" off: words are typed everywhere.
+
+## Feature M: Sessions
+
+- [ ] Quick actions > Sessions lists the tmux sessions on Ada and Jarvis; ones needing input are
+      first, then finished, then running, then plain shells.
+- [ ] Tapping a session with a tab goes to that tab; one without opens a new tab attached to it.
+- [ ] Settings > Agents lists the hosts that answered; "Forget these hosts" rescans next time.
+
+## Feature N: Live Activity
+
+- [ ] First run asks "Allow Live Activities from Blink?"; allow it.
+- [ ] `liveactivity start ada agents running test` in the local shell shows it on the lock screen
+      and in the Dynamic Island; `liveactivity end` removes it.
+- [ ] **By push:** after Blink has been opened once on this build, `ls ~/.blink-notify/` on Ada
+      shows `activity-start-token`. Start a Claude Code turn on Ada: the activity appears with
+      "running"; a permission prompt turns it to "needs input"; it ends when nothing is running.
+- [ ] Tapping the activity opens Blink on Sessions.
+
+## Feature O: terminal comes back after its page is killed
+
+- [ ] Leave Blink in the background long enough (or under memory pressure) that the terminal
+      would have come back blank: it reloads and the session redraws within a few seconds.
+

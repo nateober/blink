@@ -10,30 +10,33 @@ made "fleet-native" for driving his Tailscale-meshed Macs from an iPhone. **Test
 App Store** (GPL code he doesn't own + App-Store-terms conflict + "Blink" trademark).
 
 ## Current state (2026-11-10)
-- **Build 1125** is on TestFlight internal: the terminal holds its grid and scroll position while the app is not active (frozen rows and stale frames after an app switch), and the local prompt follows the cursor through a resize. Bugs Nate reports go in `docs/bugs.md`. Build 1123 was the review fixes.
-- **Build 1122** (Copy All and Settings quick actions) is on TestFlight internal, on top of 1121 (ten general improvements, see handoff.md) and 1120 (dictation SmartKey). `feat/voice-key` was merged into
-  `raw` on 2026-10-12 (Nate uses the key daily), so `raw` is the baseline and holds everything
-  shipped. `feat/tmux-key-config` (iPad tmux key + file-configurable sequence) is still unreleased.
-- **Upstream draft PR:** the dictation key alone (no tmux key, no FleetCore) is offered to
-  blinksh/blink as draft PR #2297 from branch `voice-key-upstream` (one commit on `upstream/raw`).
-  Changes the maintainer asks for go on that branch, not on `raw`.
-- Shipped: iCloud-folder mounts (linked into `~/<name>`), `Run Fleet Command` + `Run Fleet Script`
-  App Intents + the `fleetexec` terminal twin, push + `notiflog` inbox, `$PATH` inclusion, the tmux
-  menu SmartKey, and (1120) the dictation SmartKey (on-device speech, live strip, typed at the
-  cursor). Live Activity app-side ships but is dormant until the widget target exists.
+- **The agent loop** is the newest work (plan and prior art:
+  `docs/superpowers/plans/2026-11-10-agent-loop.md`): a Claude Code hook on the hosts pushes the
+  phone when an agent needs input and a tap goes to that tmux session; Sessions (a switcher
+  across hosts); Paste Image; dictation into the compose area when an agent is in front; the
+  Live Activity, now with its widget target and started by push; and the terminal page reloading
+  after iOS kills it. Host side: `scripts/fleet/install-agent-loop.sh` (installed on Ada and
+  Jarvis; Max still needs it). `tm` sets the tmux window title the app reads.
+- **Build 1125** fixed frozen rows and stale frames after an app switch. Bugs Nate reports go in
+  `docs/bugs.md`.
+- `raw` is the baseline and holds everything shipped. `feat/tmux-key-config` (iPad tmux key +
+  file-configurable sequence) is still unreleased.
+- **Upstream draft PR:** the dictation key alone is offered to blinksh/blink as draft PR #2297
+  from branch `voice-key-upstream`. Changes the maintainer asks for go on that branch, not `raw`.
 
 ## Open items — these need NATE (surface them at the start of a fresh session)
-1. **Add the Live Activity widget-extension target in Xcode** → `docs/LIVE-ACTIVITY-SETUP.md`. Until
-   then the lock-screen / Dynamic Island indicator can't render.
-2. **Finish the dictation key's device checklist** (MANUAL-TESTS § Feature E: bare shell, vim,
-   hold versus tap), and decide whether `feat/tmux-key-config` ships.
-3. **On-device acceptance** (sim can't cover these): iCloud-folder linking into `~`, `addpath` →
-   `$PATH` membership, `Run Fleet Script`, real-APNs push. Checklist: `MANUAL-TESTS.md`.
+1. **Device checks for the agent loop** (MANUAL-TESTS Features J to O): none of the push, SSH or
+   microphone paths can be confirmed in the simulator.
+2. **Install the host side on Max** when it is online:
+   `scripts/fleet/install-agent-loop.sh --relay ada.ober`.
+3. **Build 1125's leave-and-return check** (Feature I), the dictation key's checklist (Feature E),
+   and whether `feat/tmux-key-config` ships.
 
 ## Working here
 ```bash
 git checkout raw                              # baseline; branch new work off it
-swift test --package-path tools/FleetCore     # 51 tests = pure-logic verification path
+swift test --package-path tools/FleetCore     # 110 tests = pure-logic verification path
+uv run --with pytest pytest scripts/fleet -q   # host-side scripts (hook, push, session list)
 # build for sim: xcodebuild ... -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' ENABLE_DEBUG_DYLIB=NO
 #   (keep code signing ON: CODE_SIGNING_ALLOWED=NO drops the app-group entitlement → crash in Migrator at launch)
 # ship a TestFlight build: scripts/release.sh  (detached, ~15 min; auto-bumps build #)

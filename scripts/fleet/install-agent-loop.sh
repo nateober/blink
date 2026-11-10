@@ -32,6 +32,18 @@ for name in blink-agent-hook blink-attach blink-sessions blink-push blink-activi
   ln -sf "$home/bin/blink_fleet.py" "$bin/$name"
 done
 
+# `mosh <host> -- blink-attach ...` and `ssh <host> blink-sessions` run without an interactive
+# shell, so ~/.local/bin has to be on the PATH zsh gives every shell.
+if ! zsh -c 'command -v blink-attach' >/dev/null 2>&1; then
+  {
+    echo ''
+    echo '# >>> blink agent loop: ~/.local/bin for non-interactive shells >>>'
+    echo 'export PATH="$HOME/.local/bin:$PATH"'
+    echo '# <<< blink agent loop <<<'
+  } >> "$HOME/.zshenv"
+  echo "PATH: added ~/.local/bin to ~/.zshenv"
+fi
+
 python3 - "$home/config.json" "$key_id" "$team_id" "$p8" "$relay" <<'PY'
 import json, os, sys
 path, key_id, team_id, p8, relay = sys.argv[1:6]
