@@ -157,3 +157,15 @@ Simulator-checked where it can be; these need the phone or iPad.
       the words are typed into the tab you started in.
 - [ ] **Scrolled up under a prompt theme:** scroll up in a shell whose prompt queries the terminal
       (or run vim): the view stays where you put it until you type.
+
+## Feature I: grid held while the app is not active (build after 1122)
+
+- [ ] **Frozen rows after an app switch (the reported bug):** in mosh + tmux, hide and show the
+      keyboard once, start something that keeps printing, switch to another app for a few
+      seconds and come back. Every row is current, the bottom band included, with no `Ctrl-b r`.
+- [ ] **Still resizes:** after coming back, hide the keyboard: the terminal grows to fill the
+      screen and tmux redraws its status line at the new bottom. Rotate the phone: same.
+- [ ] **Control Centre:** pull it down over a live session and dismiss it: nothing moves, and
+      typing works at once.
+- [ ] **App lock:** with Auto Lock on, come back through Face ID: the terminal fits the screen
+      within a second of unlocking.

@@ -195,6 +195,8 @@ class TermController: UIViewController {
 
   private var _sessionPayload: TermSessionPayload? = nil
   private var _resizePending = false
+  private var _resizeHeld = false
+  private var _resizeSettleScheduled = false
   private var _session: Session? { _sessionPayload?.session }
 
   required init(meta: SessionMeta? = nil) {
@@ -253,6 +255,8 @@ class TermController: UIViewController {
     viewIsLoaded = true
     NotificationCenter.default.addObserver(self, selector: #selector(_sceneDidActivate(_:)),
                                            name: UIScene.didActivateNotification, object: nil)
+    NotificationCenter.default.addObserver(self, selector: #selector(_sceneWillDeactivate(_:)),
+                                           name: UIScene.willDeactivateNotification, object: nil)
 
     if _sceneRole == .windowExternalDisplayNonInteractive {
       _termView.termUIState.fontSize = BLKDefaults.selectedExternalDisplayFontSize()?.intValue ?? 24
@@ -274,6 +278,10 @@ class TermController: UIViewController {
   public override func viewDidLayoutSubviews() {
     super.viewDidLayoutSubviews()
     _termView.termUIState.viewSize = view.bounds.size
+    // Backstop: a hold must never outlive the inactive spell it was made for.
+    if _resizeHeld, view.window?.windowScene?.activationState == .foregroundActive {
+      _scheduleResizeSettle()
+    }
   }
 
   @objc public func terminate() {
@@ -511,15 +519,46 @@ extension TermController: TermDeviceDelegate {
     _session?.sigwinch()
   }
 
-  @objc private func _sceneDidActivate(_ notification: Notification) {
-    guard _resizePending,
-          let scene = notification.object as? UIScene,
-          scene === viewIfLoaded?.window?.windowScene
+  /// The scene is about to stop being active (app switcher, Control Centre, leaving the
+  /// app). The keyboard hides and comes back around that, so the grid is held at its size
+  /// until the scene is active again and the layout has settled. Without the hold the page
+  /// reflows for each passing size while the session is told nothing, and what the session
+  /// draws in between lands on the wrong rows (docs/bugs.md, 2026-11-10).
+  @objc private func _sceneWillDeactivate(_ notification: Notification) {
+    guard let scene = notification.object as? UIScene,
+          scene === viewIfLoaded?.window?.windowScene,
+          _termDevice.isReady
     else { return }
+    _resizeHeld = true
+    _termView.holdResize(true)
+  }
+
+  @objc private func _sceneDidActivate(_ notification: Notification) {
+    guard _resizePending || _resizeHeld,
+          let scene = notification.object as? UIScene
+    else { return }
+    // Another scene's activation is not ours. A view that is in no window has nothing to
+    // wait for, so it settles too.
+    if let ours = viewIfLoaded?.window?.windowScene, ours !== scene { return }
+    _scheduleResizeSettle()
+  }
+
+  private func _scheduleResizeSettle() {
+    guard !_resizeSettleScheduled else { return }
+    _resizeSettleScheduled = true
     // Give the keyboard time to come back and the layout to settle.
     DispatchQueue.main.asyncAfter(deadline: .now() + ResizeRules.settleDelay) { [weak self] in
-      guard let self, self._resizePending else { return }
-      if self.viewIfLoaded?.window?.windowScene?.activationState == .foregroundActive {
+      guard let self else { return }
+      self._resizeSettleScheduled = false
+      let state = self.viewIfLoaded?.window?.windowScene?.activationState
+      guard ResizeRules.settles(sceneState: state.map { $0 == .foregroundActive }) else { return }
+      if self._resizeHeld {
+        // The page takes the size the view has now; if that differs from what it had, it
+        // reports it, and by now the scene is active so the session hears at once.
+        self._resizeHeld = false
+        self._termView.holdResize(false)
+      }
+      if self._resizePending {
         self._resizePending = false
         self._session?.sigwinch()
       }

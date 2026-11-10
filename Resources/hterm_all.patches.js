@@ -66,3 +66,22 @@ hterm.VT.prototype.setDECMode = function(code, state) {
   }
   hterm.VT.prototype.setDECMode_original.call(this, code, state);
 };
+
+// Blink: hold the grid while the app is not active (see term_holdResize in term.js).
+// Both entry points are covered: the window's resize event, and the terminal's own reflow,
+// which other paths (a scroll report noticing a new screen size) can reach too.
+hterm.ScrollPort.prototype.onResize_original = hterm.ScrollPort.prototype.onResize_;
+hterm.ScrollPort.prototype.onResize_ = function(e) {
+  if (window._blinkResizeHold && window._blinkResizeHold.skips()) {
+    return;
+  }
+  hterm.ScrollPort.prototype.onResize_original.call(this, e);
+};
+
+hterm.Terminal.prototype.onResize_original = hterm.Terminal.prototype.onResize_;
+hterm.Terminal.prototype.onResize_ = function() {
+  if (window._blinkResizeHold && window._blinkResizeHold.skips()) {
+    return;
+  }
+  hterm.Terminal.prototype.onResize_original.call(this);
+};

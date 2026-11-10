@@ -24,4 +24,10 @@ final class TerminalViewRulesTests: XCTestCase {
     XCTAssertTrue(ResizeRules.defersResize(sceneIsActive: false))
     XCTAssertFalse(ResizeRules.defersResize(sceneIsActive: true))
   }
+
+  func testHeldSizeSettlesOnlyWhenActiveOrOutOfAnyWindow() {
+    XCTAssertTrue(ResizeRules.settles(sceneState: true))
+    XCTAssertTrue(ResizeRules.settles(sceneState: nil))
+    XCTAssertFalse(ResizeRules.settles(sceneState: false))
+  }
 }

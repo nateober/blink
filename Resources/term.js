@@ -705,6 +705,40 @@ function term_syncColors() {
   }, 30);
 }
 
+// <pure:resizehold>
+// While the app is not active the keyboard hides and comes back, and each of those would
+// reflow the terminal grid without the remote end hearing about it; output drawn in between
+// then lands on the wrong rows and stays there. So the grid is held: size changes that
+// arrive during a hold are only remembered, and one resize runs when the hold ends.
+function blink_makeResizeHold() {
+  var held = false;
+  var missed = false;
+  return {
+    // True when a size change must be skipped (and remembered) for now.
+    skips: function () {
+      if (held) { missed = true; }
+      return held;
+    },
+    // Starts or ends a hold. Returns true when a remembered size change should run now.
+    set: function (hold) {
+      held = !!hold;
+      if (held || !missed) { return false; }
+      missed = false;
+      return true;
+    },
+    isHeld: function () { return held; },
+  };
+}
+// </pure:resizehold>
+
+var _blinkResizeHold = blink_makeResizeHold();
+
+function term_holdResize(hold) {
+  if (_blinkResizeHold.set(hold) && t && t.scrollPort_ && t.scrollPort_.onResize_) {
+    t.scrollPort_.onResize_();
+  }
+}
+
 function term_setAutoCarriageReturn(state) {
   t.setAutoCarriageReturn(state);
 }
