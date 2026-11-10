@@ -25,20 +25,38 @@ def build_payload(args):
     # content-available wakes a backgrounded/suspended app so it can record the push to its
     # inbox even before the user taps the banner (didReceiveRemoteNotification). A force-quit
     # app still won't wake — iOS doesn't deliver background pushes to terminated apps.
-    return {"aps": {"alert": alert, "sound": "default", "content-available": 1}, "blink": blink}
+    aps = {"alert": alert, "content-available": 1}
+    if args.quiet:
+        # Lands in Notification Center without sound, banner or waking the screen.
+        aps["interruption-level"] = "passive"
+    else:
+        aps["sound"] = "default"
+    return {"aps": aps, "blink": blink}
+
+# ActivityKit decodes content-state with a plain JSONDecoder, which reads a Date as seconds
+# since 2001-01-01, not since 1970.
+REFERENCE_DATE_OFFSET = 978307200
 
 def build_la_payload(args):
-    # Live Activity update/end. Targets the per-activity token (~/.blink-notify/activity-token),
-    # NOT the device token. content-state keys mirror FleetActivityAttributes.ContentState.
+    # Live Activity start/update/end. update and end target the per-activity token
+    # (~/.blink-notify/activity-token); start targets the push-to-start token
+    # (~/.blink-notify/activity-start-token). Neither is the device token.
+    # content-state keys mirror FleetActivityAttributes.ContentState.
     aps = {
         "timestamp": int(time.time()),
-        "event": args.live_activity_event,  # "update" | "end"
+        "event": args.live_activity_event,  # "start" | "update" | "end"
         "content-state": {
             "status": args.la_status,
             "detail": args.la_detail,
-            "updatedAt": int(time.time()),
+            "updatedAt": int(time.time()) - REFERENCE_DATE_OFFSET,
         },
     }
+    if args.live_activity_event == "start":
+        # A remote start has to name the attributes type, give the fixed attributes, and
+        # carry an alert.
+        aps["attributes-type"] = "FleetActivityAttributes"
+        aps["attributes"] = {"host": args.host or "fleet", "sessionLabel": args.session or "agents"}
+        aps["alert"] = {"title": f"Agents on {args.host or 'the fleet'}", "body": args.la_detail or args.la_status}
     if args.live_activity_event == "end":
         aps["dismissal-date"] = int(time.time())
     return {"aps": aps}
@@ -59,8 +77,11 @@ def send(args, payload, push_type="alert"):
         "authorization": f"bearer {token}",
         "apns-topic": topic,
         "apns-push-type": push_type,
-        "apns-priority": "10",
+        "apns-priority": "5" if getattr(args, "quiet", False) and push_type == "alert" else "10",
     }
+    if args.collapse_id and push_type == "alert":
+        # One notification per session: a newer one replaces the older.
+        headers["apns-collapse-id"] = args.collapse_id
     with httpx.Client(http2=True, timeout=15) as client:
         r = client.post(url, headers=headers, content=json.dumps(payload))
     print(f"APNs {r.status_code} {r.headers.get('apns-id','')} {r.text}".strip())
@@ -80,9 +101,11 @@ def main():
     ap.add_argument("--p8", default="")
     ap.add_argument("--sandbox", action="store_true", help="use APNs sandbox host")
     # Live Activity update/end (targets the activity token, not the device token).
-    ap.add_argument("--live-activity-event", dest="live_activity_event", choices=["update", "end"])
+    ap.add_argument("--live-activity-event", dest="live_activity_event", choices=["start", "update", "end"])
     ap.add_argument("--la-status", dest="la_status", default="running")
     ap.add_argument("--la-detail", dest="la_detail", default="")
+    ap.add_argument("--quiet", action="store_true", help="deliver silently to Notification Center")
+    ap.add_argument("--collapse-id", dest="collapse_id", default="", help="replace an earlier push with the same id")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
     args.host_base = "https://api.sandbox.push.apple.com" if args.sandbox else APNS_HOST

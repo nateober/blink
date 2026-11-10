@@ -180,6 +180,9 @@ class SearchModel: ObservableObject {
     self.close()
   }
 
+  /// Set before `openScratch()`; the editor appends it to the scratch text once.
+  var pendingScratchPrompt: String? = nil
+
   func openScratch() {
     let snippet = Snippet.scratch()
     self.editingMode = .code
@@ -187,6 +190,10 @@ class SearchModel: ObservableObject {
     // Restore saved language mode for scratch
     if let savedMode = LanguageMode(rawValue: BLKDefaults.scratchLanguageMode()) {
       self.languageMode = savedMode
+    }
+    // Dictated words for an agent are a prompt, whatever the scratch area was last used for.
+    if pendingScratchPrompt != nil {
+      self.languageMode = .prompt
     }
 
     self.currentSnippetName = snippet.fuzzyIndex

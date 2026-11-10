@@ -92,6 +92,8 @@ class SnippetsViewController: UIHostingController<SwiftUISnippetsView>, UIGestur
   var model: SearchModel!
   var tapGestureRecogninzer: UITapGestureRecognizer!
   var pendingOpenScratch: Bool = false
+  /// Words to add to the scratch area, which then opens in Prompt mode (dictation into an agent).
+  var pendingScratchPrompt: String? = nil
   var hostingView: UIView?
 
   override func loadView() {
@@ -145,6 +147,8 @@ class SnippetsViewController: UIHostingController<SwiftUISnippetsView>, UIGestur
     self.model.inputView?.becomeFirstResponder()
     if pendingOpenScratch {
       pendingOpenScratch = false
+      self.model.pendingScratchPrompt = pendingScratchPrompt
+      pendingScratchPrompt = nil
       self.model.openScratch()
     }
   }

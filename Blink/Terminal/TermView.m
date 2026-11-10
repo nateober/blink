@@ -41,6 +41,7 @@
 #import "Blink-Swift.h"
 
 NSString * TermViewReadyNotificationKey = @"TermViewReadyNotificationKey";
+NSString * TermViewPasteImageNotificationKey = @"TermViewPasteImageNotificationKey";
 NSString * TermViewBrowserReadyNotificationKey = @"TermViewBrowserReadyNotificationKey";
 
 struct winsize __winSizeFromJSON(NSDictionary *json) {
@@ -61,6 +62,7 @@ struct winsize __winSizeFromJSON(NSDictionary *json) {
   WKWebViewGesturesInteraction *_gestureInteraction;
   
   BOOL _jsIsBusy;
+  BOOL _recovering;
   dispatch_queue_t _jsQueue;
   NSMutableString *_jsBuffer;
   CGRect _currentBounds;
@@ -156,6 +158,8 @@ struct winsize __winSizeFromJSON(NSDictionary *json) {
   [configuration.userContentController addScriptMessageHandler:self name:@"interOp"];
 
   _webView = [[SmarterTermInput alloc] initWithFrame:CGRectZero configuration:configuration];
+  // For webViewWebContentProcessDidTerminate: (the page's process can be killed under memory pressure).
+  _webView.navigationDelegate = self;
   _webView.UIDelegate = self;
   
   if (@available(iOS 16.0, *)) {
@@ -265,6 +269,23 @@ struct winsize __winSizeFromJSON(NSDictionary *json) {
 
   NSURLRequest *request = [NSURLRequest requestWithURL:url];
   [_browserView loadRequest:request];
+}
+
+// iOS can kill the page's process while the app is in the background, which leaves a blank
+// terminal that takes no output. Load the page again; `_onTerminalReady:` then asks the
+// session to redraw instead of starting it a second time.
+- (void)webViewWebContentProcessDidTerminate:(WKWebView *)webView {
+  if (webView != _webView) {
+    [webView reload];
+    return;
+  }
+  _recovering = YES;
+  _isReady = NO;
+  dispatch_async(_jsQueue, ^{
+    _jsIsBusy = NO;
+    _jsBuffer = [[NSMutableString alloc] init];
+  });
+  [_webView reload];
 }
 
 - (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
@@ -727,6 +748,15 @@ static NSString * _sanitizeTextForClipboard(NSString *text);
     _gestureInteraction.indicatorStyle = UIScrollViewIndicatorStyleDefault;
   }
   
+  if (_recovering) {
+    _recovering = NO;
+    _isReady = YES;
+    if ([(id)_device respondsToSelector:@selector(viewDidRecover:)]) {
+      [_device viewDidRecover:__winSizeFromJSON(data[@"size"])];
+    }
+    return;
+  }
+
   [_device viewWinSizeChanged:__winSizeFromJSON(data[@"size"])];
 
   _isReady = YES;
@@ -974,6 +1004,12 @@ static NSString * _sanitizeTextForClipboard(NSString *text) {
 
 - (void)paste:(id)sender
 {
+  // An image and no text on the clipboard: send the image to the host and type its path.
+  if (![UIPasteboard generalPasteboard].hasStrings && [UIPasteboard generalPasteboard].hasImages) {
+    [[NSNotificationCenter defaultCenter] postNotificationName:TermViewPasteImageNotificationKey object:self];
+    [self cleanSelection];
+    return;
+  }
   NSString *str = [UIPasteboard generalPasteboard].string;
   if (str) {
     [self scrollToBottom];
