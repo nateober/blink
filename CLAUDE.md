@@ -9,7 +9,8 @@ Nate's personal fork of [blinksh/blink](https://github.com/blinksh/blink) (GPL-3
 made "fleet-native" for driving his Tailscale-meshed Macs from an iPhone. **TestFlight-only, never
 App Store** (GPL code he doesn't own + App-Store-terms conflict + "Blink" trademark).
 
-## Current state (2026-10-12)
+## Current state (2026-11-10)
+- **Build 1124** is on TestFlight internal: the terminal holds its grid while the app is not active (frozen rows after an app switch), and the local prompt follows the cursor through a resize. Bugs Nate reports go in `docs/bugs.md`. Build 1123 was the review fixes.
 - **Build 1122** (Copy All and Settings quick actions) is on TestFlight internal, on top of 1121 (ten general improvements, see handoff.md) and 1120 (dictation SmartKey). `feat/voice-key` was merged into
   `raw` on 2026-10-12 (Nate uses the key daily), so `raw` is the baseline and holds everything
   shipped. `feat/tmux-key-config` (iPad tmux key + file-configurable sequence) is still unreleased.
