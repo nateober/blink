@@ -96,6 +96,11 @@ class UIScrollViewWithoutHitTest: UIScrollView {
   private let _handlerName: String
   private var _scrollReportInFlight = false
   private var _scrollReportSentAt: CFTimeInterval = 0
+  // While the grid is held (the app is not active) the page keeps drawing for the view it
+  // had. These are that view's scroll position and height; nil when nothing is held.
+  private var _heldOffset: CGPoint? = nil
+  private var _heldViewHeight: CGFloat? = nil
+  private var _settingOffsetForPage = false
   private var _pendingScrollReport: CGPoint? = nil
   private let _1fTapRecognizer = UITapGestureRecognizer()
   private let _1fPanRecognizer = UIPanGestureRecognizer()
@@ -469,12 +474,52 @@ extension WKWebViewGesturesInteraction: UIScrollViewDelegate {
     }
   }
 
+  /// Holds the scroll position while the terminal grid is held. When the keyboard hides
+  /// behind an inactive app the view grows, and the scroll view pulls its offset back to
+  /// fit; passed on, that made the page draw from the top of its buffer (old rows, no
+  /// status line) until the hold ended. Held, such moves are not reported, the page's own
+  /// moves still are, and the position is put back when the hold ends.
+  @objc func setResizeHeld(_ held: Bool) {
+    if held {
+      guard _heldOffset == nil else { return }
+      _heldOffset = _scrollView.contentOffset
+      _heldViewHeight = _scrollView.bounds.height
+      return
+    }
+    guard let offset = _heldOffset else { return }
+    _heldOffset = nil
+    _heldViewHeight = nil
+    if _scrollView.contentOffset != offset {
+      _setOffsetForPage(offset, animated: false)
+    }
+  }
+
+  /// The position the page believes the view is at.
+  private var _pageOffset: CGPoint { _heldOffset ?? _scrollView.contentOffset }
+  /// The height the page is drawing for.
+  private var _pageViewHeight: CGFloat { _heldViewHeight ?? _scrollView.bounds.height }
+
+  /// Moves the view on the page's behalf (or to restore its position); always reported.
+  private func _setOffsetForPage(_ offset: CGPoint, animated: Bool) {
+    if _heldOffset != nil {
+      _heldOffset = offset
+      if _scrollView.contentOffset == offset {
+        _reportScroll(offset)
+        return
+      }
+    }
+    _settingOffsetForPage = true
+    // Animated moves report as they go, after this returns; a held view moves at once.
+    _scrollView.setContentOffset(offset, animated: animated && _heldOffset == nil)
+    _settingOffsetForPage = false
+  }
+
   /// Typed input brings the view back to the newest output.
   @objc func scrollToBottom() {
     guard !_scrollView.isTracking, !_scrollView.isDragging else { return }
-    let bottom = max(_scrollView.contentSize.height - _scrollView.bounds.height, 0)
-    if _scrollView.contentOffset.y < bottom - 1 {
-      _scrollView.setContentOffset(CGPoint(x: 0, y: bottom), animated: false)
+    let bottom = max(_scrollView.contentSize.height - _pageViewHeight, 0)
+    if _pageOffset.y < bottom - 1 {
+      _setOffsetForPage(CGPoint(x: 0, y: bottom), animated: false)
     }
   }
 
@@ -482,7 +527,9 @@ extension WKWebViewGesturesInteraction: UIScrollViewDelegate {
     let offset = scrollView.contentOffset
     
     if scrollView === _scrollView {
-      _reportScroll(offset)
+      if ScrollRules.reportsScroll(gridHeld: _heldOffset != nil, movedForPage: _settingOffsetForPage) {
+        _reportScroll(offset)
+      }
       return
     }
     
@@ -575,14 +622,22 @@ extension WKWebViewGesturesInteraction: WKScriptMessageHandler {
       // user isn't scrolling: pulling the view down under a finger on every new line fights
       // the drag and floods the page with scroll reports.
       let follows = ScrollRules.followsNewContent(
-        offsetY: Double(_scrollView.contentOffset.y),
+        offsetY: Double(_pageOffset.y),
         contentHeight: Double(_scrollView.contentSize.height),
-        viewHeight: Double(_scrollView.bounds.height),
+        viewHeight: Double(_pageViewHeight),
         userIsScrolling: _scrollView.isTracking || _scrollView.isDragging || _scrollView.isDecelerating)
-      let bottom = max(contentSize.height - _scrollView.bounds.height, 0)
-      let previousY = _scrollView.contentOffset.y
+      let bottom = max(contentSize.height - _pageViewHeight, 0)
+      let previousY = _pageOffset.y
+      // Changing the content size can move the offset by itself; only the line after counts.
+      _settingOffsetForPage = _heldOffset == nil
       _scrollView.contentSize = contentSize
-      _scrollView.contentOffset = CGPoint(x: 0, y: follows ? bottom : min(previousY, bottom))
+      _settingOffsetForPage = false
+      let target = CGPoint(x: 0, y: follows ? bottom : min(previousY, bottom))
+      if _heldOffset != nil {
+        if target != _pageOffset { _setOffsetForPage(target, animated: false) }
+      } else {
+        _scrollView.contentOffset = target
+      }
       
       _scrollView.panGestureRecognizer.isEnabled = isPrimary
       _termScrollView.panGestureRecognizer.isEnabled = !isPrimary
@@ -599,11 +654,11 @@ extension WKWebViewGesturesInteraction: WKScriptMessageHandler {
       _scrollView.panGestureRecognizer.isEnabled = isPrimary
       _termScrollView.panGestureRecognizer.isEnabled = !isPrimary
       
-      if (offset == _scrollView.contentOffset) {
+      if (offset == _pageOffset) {
         return
       }
       // TODO: debounce?
-      _scrollView.setContentOffset(offset, animated: animated)
+      _setOffsetForPage(offset, animated: animated)
       
       
     default: break

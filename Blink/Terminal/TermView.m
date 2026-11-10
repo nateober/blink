@@ -464,6 +464,8 @@ struct winsize __winSizeFromJSON(NSDictionary *json) {
 
 - (void)holdResize:(BOOL)hold
 {
+  // The scroll position first: it is put back before the page looks at its size again.
+  [_gestureInteraction setResizeHeld:hold];
   [_webView evaluateJavaScript:term_holdResize(hold) completionHandler:nil];
 }
 
