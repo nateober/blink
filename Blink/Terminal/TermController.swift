@@ -504,6 +504,11 @@ extension TermController: TermDeviceDelegate {
     _ = _termDevice.view?.webView.becomeFirstResponder()
   }
     
+  public func deviceDidRecover() {
+    _resizePending = false
+    _session?.sigwinch()
+  }
+
   public func deviceSizeChanged() {
     print("Terminal size changed - rows: \(_termDevice.rows) x cols: \(_termDevice.cols)")
     delegate?.terminalDidResize?(control: self)

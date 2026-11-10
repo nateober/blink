@@ -76,11 +76,13 @@ final class AgentRulesTests: XCTestCase {
   }
 
   func testReadsAHostsSessionList() {
-    let out = "main\t3\t1\t1793620868\t-\tnateober@ada:~\n"
-      + "blink\t2\t1\t1793991942\tneeds_input\t✳ Blink refresh bugs\n"
+    let out = "main\t3\t1\t1793620868\t-\tAda\tnateober@ada:~\n"
+      + "blink\t2\t1\t1793991942\tneeds_input\tAda\t✳ Blink refresh bugs\n"
       + "bad line\n"
-      + "old\t1\t0\t1793000000\tdone\t✳ Done thing\n"
-    let sessions = FleetSession.parse(host: "ada", output: out)
+      + "old\t1\t0\t1793000000\tdone\tAda\t✳ Done thing\n"
+    let sessions = FleetSession.parse(alias: "ada", output: out)
+    XCTAssertEqual(sessions[0].alias, "ada")
+    XCTAssertEqual(sessions[0].host, "Ada")
     XCTAssertEqual(sessions.map(\.name), ["main", "blink", "old"])
     XCTAssertEqual(sessions[1].state, .needsInput)
     XCTAssertEqual(sessions[1].task, "Blink refresh bugs")
@@ -92,12 +94,67 @@ final class AgentRulesTests: XCTestCase {
   func testAge() {
     let now = Date(timeIntervalSince1970: 1_000_000)
     func s(_ ago: TimeInterval) -> FleetSession {
-      FleetSession(host: "a", name: "n", windows: 1, attached: 0,
+      FleetSession(alias: "a", host: "a", name: "n", windows: 1, attached: 0,
                    activity: now.addingTimeInterval(-ago), state: .none, title: "")
     }
     XCTAssertEqual(s(5).age(now: now), "now")
     XCTAssertEqual(s(600).age(now: now), "10m")
     XCTAssertEqual(s(7200).age(now: now), "2h")
     XCTAssertEqual(s(200_000).age(now: now), "2d")
+  }
+
+  func testImageFileNameAndSize() {
+    let utc = TimeZone(identifier: "UTC")!
+    XCTAssertEqual(PasteUpload.fileName(at: Date(timeIntervalSince1970: 0), timeZone: utc), "blink-19700101-000000.jpg")
+    XCTAssertTrue(PasteUpload.scaledSize(width: 1179, height: 2556) == (923, 2000))
+    XCTAssertTrue(PasteUpload.scaledSize(width: 800, height: 600) == (800, 600))
+  }
+
+  /// Runs the upload commands in a real shell with a scratch HOME and checks the bytes.
+  func testUploadCommandsWriteTheImage() throws {
+    let home = FileManager.default.temporaryDirectory.appendingPathComponent("paste-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: home) }
+    // Larger than two chunks, so the first, middle and last command shapes all run.
+    var bytes = [UInt8](repeating: 0, count: 300_000)
+    for i in bytes.indices { bytes[i] = UInt8(truncatingIfNeeded: i &* 31 &+ i / 7) }
+    let data = Data(bytes)
+    let name = "blink-20261110-101500.jpg"
+    let commands = PasteUpload.commands(base64: data.base64EncodedString(), fileName: name)
+    XCTAssertEqual(commands.count, 3)
+
+    var last = ""
+    for command in commands {
+      let p = Process()
+      p.executableURL = URL(fileURLWithPath: "/bin/sh")
+      p.arguments = ["-c", command]
+      p.environment = ["HOME": home.path, "PATH": "/usr/bin:/bin"]
+      let pipe = Pipe()
+      p.standardOutput = pipe
+      try p.run()
+      let out = pipe.fileHandleForReading.readDataToEndOfFile()
+      p.waitUntilExit()
+      XCTAssertEqual(p.terminationStatus, 0, command.prefix(80).description)
+      last = String(decoding: out, as: UTF8.self)
+    }
+    let file = home.appendingPathComponent("Scratch/blink-paste/\(name)")
+    XCTAssertEqual(try Data(contentsOf: file), data)
+    XCTAssertFalse(FileManager.default.fileExists(atPath: file.path + ".b64"))
+    XCTAssertEqual(PasteUpload.typedText(stdout: last, fileName: name), file.path + " ")
+  }
+
+  func testSmallImageIsOneCommandAndEmptyIsNone() {
+    XCTAssertEqual(PasteUpload.commands(base64: "aGk=", fileName: "blink-x.jpg").count, 1)
+    XCTAssertTrue(PasteUpload.commands(base64: "", fileName: "blink-x.jpg").isEmpty)
+  }
+
+  func testOnlyTheExpectedPathIsTyped() {
+    let name = "blink-20261110-101500.jpg"
+    XCTAssertEqual(PasteUpload.typedText(stdout: "/Users/n/Scratch/blink-paste/\(name)\n", fileName: name),
+                   "/Users/n/Scratch/blink-paste/\(name) ")
+    XCTAssertNil(PasteUpload.typedText(stdout: "", fileName: name))
+    XCTAssertNil(PasteUpload.typedText(stdout: "rm -rf /; /x/Scratch/blink-paste/\(name)", fileName: name))
+    XCTAssertNil(PasteUpload.typedText(stdout: "/x/elsewhere/\(name)", fileName: name))
+    XCTAssertNil(PasteUpload.typedText(stdout: "/x y/Scratch/blink-paste/\(name)", fileName: name))
   }
 }

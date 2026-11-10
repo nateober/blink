@@ -46,6 +46,8 @@ const BlinkActionID BlinkActionToggleLayoutLock = @"blink-toggle-layout-lock";
 const BlinkActionID BlinkActionToggleGeoTrack = @"blink-toggle-geo-track";
 const BlinkActionID BlinkActionOpenLink = @"blink-open-link";
 const BlinkActionID BlinkActionCopyAll = @"blink-copy-all";
+const BlinkActionID BlinkActionSessions = @"blink-sessions";
+const BlinkActionID BlinkActionPasteImage = @"blink-paste-image";
 const BlinkActionID BlinkActionSettings = @"blink-settings";
 const BlinkActionID BlinkActionToggleCompactActions = @"blink-toggle-compact-actions";
 const BlinkActionID BlinkActionLayoutFill = @"blink-layout-fill";
@@ -336,6 +338,24 @@ const CGFloat MENU_PADDING = 10.0;
             image:[UIImage systemImageNamed:@"doc.on.doc"]
             identifier:elementID handler:^(__kindof UIAction * _Nonnull action) {
       [[delegate spaceController] copyAllAction];
+    }];
+  }
+
+  if (elementID == BlinkActionSessions) {
+    return [UIAction
+            actionWithTitle:noTitle ? @"" : @"Sessions"
+            image:[UIImage systemImageNamed:@"rectangle.stack"]
+            identifier:elementID handler:^(__kindof UIAction * _Nonnull action) {
+      [[delegate spaceController] showSessionsAction];
+    }];
+  }
+
+  if (elementID == BlinkActionPasteImage) {
+    return [UIAction
+            actionWithTitle:noTitle ? @"" : @"Paste Image"
+            image:[UIImage systemImageNamed:@"photo.on.rectangle"]
+            identifier:elementID handler:^(__kindof UIAction * _Nonnull action) {
+      [[delegate spaceController] pasteImageAction];
     }];
   }
 

@@ -79,3 +79,20 @@ enum AgentTabTitles {
       appActive: UIApplication.shared.applicationState == .active)
   }
 }
+
+enum AgentSettings {
+  private static let composeKey = "AgentsComposeDictation"
+  private static let hostsKey = "AgentsSessionHosts"
+
+  /// Dictation opens the compose area in Prompt mode when a coding agent is in front.
+  static var composeDictation: Bool {
+    get { UserDefaults.standard.object(forKey: composeKey) as? Bool ?? true }
+    set { UserDefaults.standard.set(newValue, forKey: composeKey) }
+  }
+
+  /// Host entries that answered the session switcher last time. Empty means ask them all.
+  static var sessionHosts: [String] {
+    get { UserDefaults.standard.stringArray(forKey: hostsKey) ?? [] }
+    set { UserDefaults.standard.set(newValue, forKey: hostsKey) }
+  }
+}

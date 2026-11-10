@@ -40,6 +40,7 @@
 @class LayoutConstraintManager;
 
 extern NSString * TermViewReadyNotificationKey;
+extern NSString * TermViewPasteImageNotificationKey;
 extern NSString * TermViewBrowserReadyNotificationKey;
 
 @protocol TermViewDeviceProtocol
@@ -57,6 +58,10 @@ extern NSString * TermViewBrowserReadyNotificationKey;
 - (void)viewNotify:(NSDictionary *)data;
 - (void)viewSelectionChanged;
 - (void)viewDidReceiveBellRing;
+
+@optional
+/// The page was loaded again after its process died; `win` is its size.
+- (void)viewDidRecover:(struct winsize)win;
 
 @end
 

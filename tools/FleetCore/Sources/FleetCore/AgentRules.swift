@@ -112,7 +112,7 @@ public enum DictationTarget: Equatable {
 }
 
 /// One tmux session on a host, as `blink-sessions` prints it: tab-separated
-/// `name, windows, attached clients, last activity (epoch), state, pane title`.
+/// `name, windows, attached clients, last activity (epoch), state, host, pane title`.
 public struct FleetSession: Equatable {
   public enum State: String, Equatable {
     case needsInput = "needs_input"
@@ -131,6 +131,9 @@ public struct FleetSession: Equatable {
     }
   }
 
+  /// The Blink host entry the list came from.
+  public let alias: String
+  /// What the host calls itself (tmux's `#h`), which is what window titles and pushes carry.
   public let host: String
   public let name: String
   public let windows: Int
@@ -139,27 +142,33 @@ public struct FleetSession: Equatable {
   public let state: State
   public let title: String
 
-  public static func parse(host: String, output: String) -> [FleetSession] {
+  public static func parse(alias: String, output: String) -> [FleetSession] {
     output.split(whereSeparator: \.isNewline).compactMap { line in
       let f = line.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
-      guard f.count >= 6, AgentRoute.isSessionName(f[0]) else { return nil }
+      guard f.count >= 7, AgentRoute.isSessionName(f[0]), !f[5].isEmpty else { return nil }
       return FleetSession(
-        host: host,
+        alias: alias,
+        host: f[5],
         name: f[0],
         windows: Int(f[1]) ?? 1,
         attached: Int(f[2]) ?? 0,
         activity: Date(timeIntervalSince1970: TimeInterval(f[3]) ?? 0),
         state: State(rawValue: f[4]) ?? .none,
-        title: f[5...].joined(separator: "\t"))
+        title: f[6...].joined(separator: "\t"))
     }
   }
+
+  /// The command the switcher runs on each host. The PATH covers a host whose
+  /// non-interactive shell doesn't set one up.
+  public static let listCommand =
+    "PATH=\"$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH\" blink-sessions"
 
   /// Sessions waiting on the user first, then finished, then by most recent activity.
   public static func sorted(_ sessions: [FleetSession]) -> [FleetSession] {
     sessions.sorted {
       if $0.state.rank != $1.state.rank { return $0.state.rank < $1.state.rank }
       if $0.activity != $1.activity { return $0.activity > $1.activity }
-      return ($0.host, $0.name) < ($1.host, $1.name)
+      return ($0.alias, $0.name) < ($1.alias, $1.name)
     }
   }
 
@@ -176,5 +185,64 @@ public struct FleetSession: Equatable {
     if s < 3600 { return "\(s / 60)m" }
     if s < 86400 { return "\(s / 3600)h" }
     return "\(s / 86400)d"
+  }
+}
+
+/// Sending a clipboard image to a host so an agent there can look at it: the file lands in
+/// `~/Scratch/blink-paste/` and its path is typed at the cursor.
+public enum PasteUpload {
+  public static let directory = "Scratch/blink-paste"
+  /// Files older than this are cleared out of the directory on each upload.
+  public static let keepDays = 7
+  /// Longest side sent, in pixels. A phone screenshot is larger than an agent needs.
+  public static let maxSide: Double = 2000
+  /// Base64 characters per command, well inside what a remote shell accepts on one line.
+  public static let chunkSize = 180_000
+
+  public static func fileName(at date: Date, timeZone: TimeZone = .current) -> String {
+    let f = DateFormatter()
+    f.locale = Locale(identifier: "en_US_POSIX")
+    f.timeZone = timeZone
+    f.dateFormat = "yyyyMMdd-HHmmss"
+    return "blink-\(f.string(from: date)).jpg"
+  }
+
+  public static func scaledSize(width: Double, height: Double) -> (width: Double, height: Double) {
+    let longest = max(width, height)
+    guard longest > maxSide, longest > 0 else { return (width, height) }
+    let k = maxSide / longest
+    return ((width * k).rounded(), (height * k).rounded())
+  }
+
+  /// The commands that write the image on the host, in order. The last one prints the
+  /// file's full path. `fileName` must come from `fileName(at:)`.
+  public static func commands(base64: String, fileName: String) -> [String] {
+    let dir = "\"$HOME/\(directory)\""
+    let part = "\(dir)/\(fileName).b64"
+    let begin = "mkdir -p \(dir) && find \(dir) -type f -mtime +\(keepDays) -delete; : > \(part)"
+    let finish = "base64 --decode < \(part) > \(dir)/\(fileName) && rm -f \(part) && printf %s \(dir)/\(fileName)"
+
+    var chunks: [String] = []
+    var rest = Substring(base64)
+    while !rest.isEmpty {
+      chunks.append(String(rest.prefix(chunkSize)))
+      rest = rest.dropFirst(chunkSize)
+    }
+    var out = chunks.map { "printf %s '\($0)' >> \(part)" }
+    guard !out.isEmpty else { return [] }
+    out[0] = begin + " && " + out[0]
+    out[out.count - 1] += " && " + finish
+    return out
+  }
+
+  /// What gets typed once the upload is done: the path the host printed and a space, or nil
+  /// when the answer isn't the path we asked for.
+  public static func typedText(stdout: String, fileName: String) -> String? {
+    let path = stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard path.hasPrefix("/"), path.hasSuffix("/\(directory)/\(fileName)"),
+          path.rangeOfCharacter(from: .controlCharacters) == nil,
+          !path.contains(" "), !path.contains("'"), !path.contains("\"")
+    else { return nil }
+    return path + " "
   }
 }

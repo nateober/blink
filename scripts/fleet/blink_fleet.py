@@ -9,7 +9,7 @@ Installed under several names (symlinks made by install-agent-loop.sh):
   blink-attach HEX   Attach to (or create) the tmux session whose name is HEX-encoded.
                      What a tap on a push runs: `mosh <host> -- blink-attach <hex>`.
   blink-sessions     One line per tmux session, tab-separated:
-                     name, windows, attached, activity epoch, state, pane title.
+                     name, windows, attached, activity epoch, state, host, pane title.
   blink-push ...     Send one push from this host's key (other hosts relay through it).
 
 State lives in ~/.blink-notify/:
@@ -287,6 +287,7 @@ def cmd_attach(argv):
 def cmd_sessions():
     fmt = "#{session_name}\t#{session_windows}\t#{session_attached}\t#{session_activity}\t#{pane_title}"
     now = time.time()
+    host = tmux("display-message", "-p", "#{host_short}") or os.uname().nodename.split(".")[0]
     for line in tmux("list-sessions", "-F", fmt).splitlines():
         parts = line.split("\t", 4)
         if len(parts) < 5:
@@ -295,7 +296,7 @@ def cmd_sessions():
         state, at, _ = read_state(name)
         if not is_agent_title(title) or now - at > STALE_SECS:
             state = ""
-        print("\t".join([name, windows, attached, activity, state or "-", title]))
+        print("\t".join([name, windows, attached, activity, state or "-", host, title]))
     return 0
 
 

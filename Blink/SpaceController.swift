@@ -304,9 +304,23 @@ class SpaceController: UIViewController {
       // Into the tab dictation started in; held for later if the app went to the background.
       guard let text, let out = self._voiceDelivery.finished(text, active: self.foregroundActive)
       else { return }
-      self._typeDictation(out.text, into: out.target)
+      self._deliverDictation(out.text, into: out.target)
     }
     return voice
+  }
+
+  /// With a coding agent in front, the words open in the compose area as a prompt to read
+  /// over and send. Anywhere else they are typed at the cursor.
+  private func _deliverDictation(_ text: String, into device: TermDevice) {
+    let onScreen = device.view?.window != nil ? device : currentDevice
+    let target = DictationTarget.choose(
+      title: onScreen?.view?.title,
+      promptModeForAgents: AgentSettings.composeDictation)
+    if target == .compose, onScreen === currentDevice, !_isSnipsInputModeActive {
+      presentScratch(prompt: text)
+      return
+    }
+    _typeDictation(text, into: device)
   }
 
   private func _typeDictation(_ text: String, into device: TermDevice) {
@@ -323,7 +337,7 @@ class SpaceController: UIViewController {
     guard let scene = n.object as? UIWindowScene, view.window?.windowScene === scene,
           let out = _voiceDelivery.activated()
     else { return }
-    _typeDictation(out.text, into: out.target)
+    _deliverDictation(out.text, into: out.target)
   }
 
   /// The mic key on the SmartKeys bar: hold to talk (release stops), or tap to start and
@@ -394,6 +408,10 @@ class SpaceController: UIViewController {
   
   public override func viewDidLoad() {
     super.viewDidLoad()
+
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(_pasteImageRequested(_:)),
+      name: NSNotification.Name(TermViewPasteImageNotificationKey), object: nil)
     
     _setupAppearance()
     
@@ -1186,7 +1204,7 @@ extension SpaceController {
       
       var ids: [BlinkActionID] = []
       // On a phone the first five show and the rest go behind "More".
-      ids.append(contentsOf:  [.snippets, .copyAll, .settings, .tabCreate, .tabClose, .openLink])
+      ids.append(contentsOf:  [.sessions, .snippets, .pasteImage, .copyAll, .tabCreate, .settings, .tabClose, .openLink])
       
       if DeviceInfo.shared().hasCorners {
         ids.append(contentsOf:  [.layoutMenu])
@@ -1446,11 +1464,12 @@ extension SpaceController: CommandsHUDDelegate {
 
 extension SpaceController: SnippetContext {
   
-  func _presentSnippetsController(receiver: SpaceController, openScratch: Bool = false) {
+  func _presentSnippetsController(receiver: SpaceController, openScratch: Bool = false, scratchPrompt: String? = nil) {
     do {
       self.view.window?.makeKeyAndVisible()
       let ctrl = try SnippetsViewController.create(context: receiver, transitionFrame: _blinkMenu?.bounds)
       ctrl.pendingOpenScratch = openScratch
+      ctrl.pendingScratchPrompt = scratchPrompt
       DispatchQueue.main.async {
         ctrl.view.frame = self.view.bounds
         ctrl.willMove(toParent: self)
@@ -1467,6 +1486,11 @@ extension SpaceController: SnippetContext {
 
   func presentSnippetsController() {
     _interactiveSpaceController()._presentSnippetsController(receiver: self)
+  }
+
+  /// Opens the compose area in Prompt mode with `text` added to whatever it held.
+  func presentScratch(prompt text: String) {
+    _interactiveSpaceController()._presentSnippetsController(receiver: self, openScratch: true, scratchPrompt: text)
   }
 
   func presentSnippetsControllerWithScratch() {
@@ -1587,9 +1611,13 @@ extension SpaceController {
   /// Goes to the tab attached to a tmux session on a fleet host, or opens one. What a tap
   /// on an agent push and a pick in the session switcher both do.
   @objc func openAgentSession(host: String, session: String) {
+    openAgentSession(host: host, session: session, alias: FleetHosts.alias(for: host))
+  }
+
+  func openAgentSession(host: String, session: String, alias: String?) {
     let route = AgentRoute.decide(
       host: host, session: session,
-      alias: FleetHosts.alias(for: host),
+      alias: alias,
       titles: agentTabTitles())
     switch route {
     case .focus(let index):
@@ -1599,6 +1627,71 @@ extension SpaceController {
     case .ignore:
       _showNote("No host entry for \(host)")
     }
+  }
+
+  /// The session switcher: every tmux session on the fleet hosts, the ones waiting on you
+  /// first. Picking one goes to its tab or opens it.
+  @objc func showSessionsAction() {
+    let open = Set(agentTabTitles().compactMap { TmuxTitle.parse($0) }.map {
+      SessionSwitcherModel.key(host: $0.host, session: $0.session)
+    })
+    let model = SessionSwitcherModel(openTabs: open)
+    let view = SessionSwitcherView(model: model, onPick: { [weak self] session in
+      self?.dismiss(animated: true) {
+        self?.openAgentSession(host: session.host, session: session.name, alias: session.alias)
+      }
+    }, onClose: { [weak self] in
+      self?.dismiss(animated: true)
+    })
+    let ctrl = UIHostingController(rootView: view)
+    ctrl.modalPresentationStyle = .pageSheet
+    if let sheet = ctrl.sheetPresentationController {
+      sheet.detents = [.medium(), .large()]
+      sheet.prefersGrabberVisible = true
+    }
+    present(ctrl, animated: true)
+    model.load()
+  }
+
+  /// Sends the image on the clipboard to the host of the tab on screen and types its path
+  /// at the cursor, so an agent there can look at it.
+  @objc func pasteImageAction() {
+    guard UIPasteboard.general.hasImages, let image = UIPasteboard.general.image else {
+      _showNote("No image on the clipboard")
+      return
+    }
+    guard let device = currentDevice,
+          let title = TmuxTitle.parse(device.view?.title),
+          let alias = FleetHosts.alias(for: title.host)
+    else {
+      _showNote("Paste Image needs a tmux session on a fleet host")
+      return
+    }
+    let hud = MBProgressHUD.showAdded(to: _overlay, animated: true)
+    hud.mode = .indeterminate
+    hud.bezelView.color = .darkGray
+    hud.contentColor = .white
+    hud.label.text = "Sending image to \(alias)"
+    Task { [weak self, weak device] in
+      let result = await ImagePaste.send(image, alias: alias)
+      await MainActor.run {
+        hud.hide(animated: true)
+        guard let self else { return }
+        switch result {
+        case .success(let typed):
+          let target = device?.view?.window != nil ? device : self.currentDevice
+          guard let input = target?.view?.browserView ?? target?.view?.webView else { return }
+          input.reportHex(VoiceInsert.hex(typed))
+        case .failure(let error):
+          self.showAlert(msg: "The image didn't reach \(alias): \(error.message)")
+        }
+      }
+    }
+  }
+
+  @objc func _pasteImageRequested(_ n: Notification) {
+    guard let termView = n.object as? TermView, termView === currentDevice?.view else { return }
+    pasteImageAction()
   }
 
   @objc func runShellSessionIntent(command: String = "") {

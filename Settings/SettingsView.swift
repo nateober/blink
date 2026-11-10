@@ -169,6 +169,12 @@ struct SettingsView: View {
           LinkActionsView()
         }
 
+        Row {
+          Label("Agents", systemImage: "sparkles.rectangle.stack")
+        } details: {
+          AgentsSettingsView()
+        }
+
         RowWithStoryBoardId(content: {
           HStack {
             Label("iCloud Sync", systemImage: "icloud")

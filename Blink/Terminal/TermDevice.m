@@ -446,6 +446,25 @@ static int __sizeOfIncompleteSequenceAtTheEnd(const char *buffer, size_t len) {
   [_delegate deviceIsReady];
 }
 
+// The page was reloaded after its process died. The screen is blank and the session has no
+// idea, so report one row fewer and then the real size: a size change is what makes mosh,
+// tmux and full-screen programs draw everything again.
+- (void)viewDidRecover:(struct winsize)size
+{
+  id delegate = _delegate;
+  if (![delegate respondsToSelector:@selector(deviceDidRecover)]) {
+    return;
+  }
+  win.ws_col = size.ws_col;
+  win.ws_row = size.ws_row > 2 ? size.ws_row - 1 : size.ws_row;
+  [delegate deviceDidRecover];
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    self->win.ws_col = size.ws_col;
+    self->win.ws_row = size.ws_row;
+    [delegate deviceDidRecover];
+  });
+}
+
 - (void)viewFontSizeChanged:(NSInteger)size
 {
   [_delegate viewFontSizeChanged:size];

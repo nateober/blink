@@ -62,6 +62,10 @@
 - (void)viewDidReceiveBellRing;
 - (UIViewController *)viewController;
 
+@optional
+/// The terminal page was reloaded and its size is set: tell the session the size.
+- (void)deviceDidRecover;
+
 @end
 
 @interface TermDevice : NSObject {

@@ -47,6 +47,8 @@ extern const BlinkActionID BlinkActionToggleLayoutLock;
 extern const BlinkActionID BlinkActionToggleGeoTrack;
 extern const BlinkActionID BlinkActionOpenLink;
 extern const BlinkActionID BlinkActionCopyAll;
+extern const BlinkActionID BlinkActionSessions;
+extern const BlinkActionID BlinkActionPasteImage;
 extern const BlinkActionID BlinkActionSettings;
 extern const BlinkActionID BlinkActionToggleCompactActions;
 

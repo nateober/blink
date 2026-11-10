@@ -237,6 +237,12 @@ class EditorViewController: UIViewController, TextViewDelegate, UINavigationItem
     } else {
       textView.text = ""
     }
+    // Dictation into an agent: the words join whatever the scratch area already held.
+    if let prompt = model.pendingScratchPrompt {
+      model.pendingScratchPrompt = nil
+      let held = (textView.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+      textView.text = held.isEmpty ? prompt : held + " " + prompt
+    }
 
     self.navigationItem.leftBarButtonItem = UIBarButtonItem(systemItem: .cancel)
     self.navigationItem.leftBarButtonItem?.target = self
