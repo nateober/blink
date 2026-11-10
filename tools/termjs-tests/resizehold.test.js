@@ -41,6 +41,7 @@ const hterm = {
 };
 hterm.ScrollPort.prototype.onResize_ = function () { calls.push('port'); };
 hterm.Terminal.prototype.onResize_ = function () { calls.push('term'); };
+hterm.Terminal.prototype.getCursorRow = function () { return 7; };
 hterm.VT.prototype.setDECMode = function () {};
 const window = {_blinkResizeHold: make()};
 const patches = fs.readFileSync(path.join(__dirname, '../../Resources/hterm_all.patches.js'), 'utf8');
@@ -56,4 +57,20 @@ assert.strictEqual(window._blinkResizeHold.set(false), true);
 port.onResize_();
 assert.deepStrictEqual(calls, ['port', 'term', 'port']);
 
-console.log('resizehold: 6 checks passed');
+// The prompt follows the cursor through a reflow.
+const rowBlock = src.split('// <pure:promptrow>')[1].split('// </pure:promptrow>')[0];
+const promptRow = new Function(rowBlock + '\nreturn blink_promptStartRow;')();
+assert.strictEqual(promptRow(20, 20, 32), 32);   // grid grew, 12 rows came back from scrollback
+assert.strictEqual(promptRow(32, 32, 20), 20);   // grid shrank
+assert.strictEqual(promptRow(18, 20, 32), 30);   // two-line prompt: start row keeps its distance
+assert.strictEqual(promptRow(5, 5, 5), 5);       // width only
+assert.strictEqual(promptRow(1, 3, 0), 0);       // never above the first row
+
+// The patched terminal resize exposes the cursor row from before the reflow, then clears it.
+let seen = null;
+hterm.Terminal.prototype.onResize_original = function () { seen = this.blinkCursorRowBeforeResize_; };
+term.onResize_();
+assert.strictEqual(seen, 7);
+assert.strictEqual(term.blinkCursorRowBeforeResize_, null);
+
+console.log('resizehold: 8 checks passed');

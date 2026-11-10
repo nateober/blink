@@ -169,3 +169,5 @@ Simulator-checked where it can be; these need the phone or iPad.
       typing works at once.
 - [ ] **App lock:** with Auto Lock on, come back through Face ID: the terminal fits the screen
       within a second of unlocking.
+- [ ] **Local shell prompt:** in the `blink>` shell, fill the screen (`env`), hide the keyboard,
+      show it again: no lines disappear and the prompt stays under the last line of output.

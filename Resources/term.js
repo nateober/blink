@@ -119,6 +119,13 @@ function term_setup(accessibilityEnabled) {
     t.io.onTerminalResize = function(cols, rows) {
       _postMessage('sigwinch', {cols, rows});
       if (t.prompt) {
+        // A change of height moves rows between the screen and the scrollback, and the
+        // cursor with them. The prompt remembers the screen row it started on, so it has
+        // to move by the same amount, or its redraw wipes whatever now sits on the old row.
+        if (t.prompt._startCol >= 0 && t.blinkCursorRowBeforeResize_ != null) {
+          t.prompt._startRow = blink_promptStartRow(
+            t.prompt._startRow, t.blinkCursorRowBeforeResize_, t.getCursorRow());
+        }
         t.prompt.resize();
       }
     };
@@ -704,6 +711,14 @@ function term_syncColors() {
     t.scrollPort_.invalidate();
   }, 30);
 }
+
+// <pure:promptrow>
+// The screen row the local prompt starts on after the grid reflowed: it moves as far as
+// the cursor did, and never above the first row.
+function blink_promptStartRow(startRow, cursorRowBefore, cursorRowAfter) {
+  return Math.max(0, startRow + (cursorRowAfter - cursorRowBefore));
+}
+// </pure:promptrow>
 
 // <pure:resizehold>
 // While the app is not active the keyboard hides and comes back, and each of those would
