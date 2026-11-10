@@ -171,3 +171,6 @@ Simulator-checked where it can be; these need the phone or iPad.
       within a second of unlocking.
 - [ ] **Local shell prompt:** in the `blink>` shell, fill the screen (`env`), hide the keyboard,
       show it again: no lines disappear and the prompt stays under the last line of output.
+- [ ] **No stale frame on return (build 1125):** in mosh + tmux with the keyboard up, switch away
+      and back: the tmux status line and current rows are there from the first moment, with no
+      flash of older rows.

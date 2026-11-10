@@ -12,6 +12,15 @@ public enum ScrollRules {
   }
 }
 
+extension ScrollRules {
+  /// Whether a move of the scroll view is passed on to the page. While the grid is held
+  /// (the app is not active) only moves made for the page count; the rest are the scroll
+  /// view refitting itself to a size the page is not drawing for.
+  public static func reportsScroll(gridHeld: Bool, movedForPage: Bool) -> Bool {
+    !gridHeld || movedForPage
+  }
+}
+
 public enum ResizeRules {
   /// Seconds to wait after the scene becomes active before reporting a held size change.
   public static let settleDelay: Double = 0.6

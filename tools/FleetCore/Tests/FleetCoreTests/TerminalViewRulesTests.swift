@@ -30,4 +30,11 @@ final class TerminalViewRulesTests: XCTestCase {
     XCTAssertTrue(ResizeRules.settles(sceneState: nil))
     XCTAssertFalse(ResizeRules.settles(sceneState: false))
   }
+
+  func testHeldGridIgnoresTheScrollViewRefittingItself() {
+    XCTAssertTrue(ScrollRules.reportsScroll(gridHeld: false, movedForPage: false))
+    XCTAssertTrue(ScrollRules.reportsScroll(gridHeld: false, movedForPage: true))
+    XCTAssertTrue(ScrollRules.reportsScroll(gridHeld: true, movedForPage: true))
+    XCTAssertFalse(ScrollRules.reportsScroll(gridHeld: true, movedForPage: false))
+  }
 }
