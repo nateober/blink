@@ -83,5 +83,12 @@ hterm.Terminal.prototype.onResize_ = function() {
   if (window._blinkResizeHold && window._blinkResizeHold.skips()) {
     return;
   }
-  hterm.Terminal.prototype.onResize_original.call(this);
+  // Where the cursor was before the grid reflows, so the local prompt can follow it
+  // (term.js, blink_promptStartRow).
+  this.blinkCursorRowBeforeResize_ = this.getCursorRow();
+  try {
+    hterm.Terminal.prototype.onResize_original.call(this);
+  } finally {
+    this.blinkCursorRowBeforeResize_ = null;
+  }
 };
