@@ -462,6 +462,11 @@ struct winsize __winSizeFromJSON(NSDictionary *json) {
   [_gestureInteraction scrollToBottom];
 }
 
+- (void)holdResize:(BOOL)hold
+{
+  [_webView evaluateJavaScript:term_holdResize(hold) completionHandler:nil];
+}
+
 - (void)refreshLayoutInsets
 {
   [self.constraintManager refresh];

@@ -21,4 +21,11 @@ public enum ResizeRules {
   public static func defersResize(sceneIsActive: Bool) -> Bool {
     !sceneIsActive
   }
+
+  /// Whether a held or deferred size change may be released now. `sceneState` is nil when
+  /// the view is in no window (nothing left to wait for), otherwise whether its scene is
+  /// active. An inactive scene keeps waiting; its next activation tries again.
+  public static func settles(sceneState: Bool?) -> Bool {
+    sceneState ?? true
+  }
 }

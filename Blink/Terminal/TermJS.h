@@ -204,6 +204,10 @@ NSString *term_apiResponse(NSString *name, NSString *response) {
 }
 
 
+NSString *term_holdResize(BOOL hold) {
+  return [NSString stringWithFormat:@"term_holdResize(%@);", hold ? @"true" : @"false"];
+}
+
 NSString *term_restore(void) {
   return @"term_restore();";
 }

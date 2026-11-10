@@ -116,6 +116,8 @@ extern NSString * TermViewBrowserReadyNotificationKey;
 /// Re-applies layout insets (after the space reserved at the top of the window changed).
 - (void)refreshLayoutInsets;
 - (void)scrollToBottom;
+/// Holds the terminal grid at its current size (YES) or lets it take the view's size again (NO).
+- (void)holdResize:(BOOL)hold;
 /// Selects everything in the terminal, scrollback included, for the next copy.
 - (void)selectAllText;
 - (void)copyAllText:(void (^)(NSInteger lines))completion;
