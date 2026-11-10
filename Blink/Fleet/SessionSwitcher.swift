@@ -13,6 +13,18 @@
 import Foundation
 import SwiftUI
 
+/// True the first time it is asked, false after: lets two racing tasks resume one continuation.
+private final class OnceFlag: @unchecked Sendable {
+  private let lock = NSLock()
+  private var claimed = false
+  func claim() -> Bool {
+    lock.lock(); defer { lock.unlock() }
+    if claimed { return false }
+    claimed = true
+    return true
+  }
+}
+
 @MainActor
 final class SessionSwitcherModel: ObservableObject {
   @Published var sessions: [FleetSession] = []
@@ -31,6 +43,28 @@ final class SessionSwitcherModel: ObservableObject {
     host.lowercased() + "\t" + session
   }
 
+  /// One host's sessions, or nil when it doesn't answer. A host that accepts the connection
+  /// and then says nothing must not hold the list up, so the wait is bounded here as well as
+  /// inside the SSH run.
+  nonisolated private static func ask(_ alias: String) async -> [FleetSession]? {
+    await withCheckedContinuation { (done: CheckedContinuation<[FleetSession]?, Never>) in
+      let once = OnceFlag()
+      let work = Task {
+        let result = try? await HeadlessSSHRunner.run(
+          alias: alias, command: FleetSession.listCommand, overallTimeout: 12)
+        let list = result.flatMap { $0.exitOK ? FleetSession.parse(alias: alias, output: $0.stdout) : nil }
+        if once.claim() { done.resume(returning: list) }
+      }
+      Task {
+        try? await Task.sleep(nanoseconds: 15_000_000_000)
+        if once.claim() {
+          work.cancel()
+          done.resume(returning: nil)
+        }
+      }
+    }
+  }
+
   func isOpen(_ session: FleetSession) -> Bool {
     openTabs.contains(Self.key(host: session.host, session: session.name))
   }
@@ -44,17 +78,23 @@ final class SessionSwitcherModel: ObservableObject {
     let hosts = scanAll ? FleetHosts.aliases() : known
     asked = hosts
     loading = true
+    #if targetEnvironment(simulator)
+    // Simulator runs have no host entries; a file of `blink-sessions` output stands in.
+    if let path = ProcessInfo.processInfo.environment["BLINK_FIXTURE_SESSIONS"],
+       let output = try? String(contentsOfFile: path, encoding: .utf8) {
+      sessions = FleetSession.sorted(FleetSession.parse(alias: "ada", output: output))
+      asked = ["ada"]
+      loading = false
+      return
+    }
+    #endif
     Task {
       var found: [FleetSession] = []
       var answered: [String] = []
       await withTaskGroup(of: (String, [FleetSession]?).self) { group in
         for alias in hosts {
           group.addTask {
-            guard let result = try? await HeadlessSSHRunner.run(
-              alias: alias, command: FleetSession.listCommand, overallTimeout: 12),
-              result.exitOK
-            else { return (alias, nil) }
-            return (alias, FleetSession.parse(alias: alias, output: result.stdout))
+            (alias, await Self.ask(alias))
           }
         }
         for await (alias, list) in group {

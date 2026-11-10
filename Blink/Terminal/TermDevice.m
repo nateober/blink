@@ -455,12 +455,18 @@ static int __sizeOfIncompleteSequenceAtTheEnd(const char *buffer, size_t len) {
   if (![delegate respondsToSelector:@selector(deviceDidRecover)]) {
     return;
   }
-  win.ws_col = size.ws_col;
-  win.ws_row = size.ws_row > 2 ? size.ws_row - 1 : size.ws_row;
+  struct winsize shrunk = size;
+  shrunk.ws_row = size.ws_row > 2 ? size.ws_row - 1 : size.ws_row;
+  win.ws_col = shrunk.ws_col;
+  win.ws_row = shrunk.ws_row;
   [delegate deviceDidRecover];
   dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-    self->win.ws_col = size.ws_col;
-    self->win.ws_row = size.ws_row;
+    // The page measures itself again once its font has loaded and may already have
+    // reported its settled size; only undo the shrink if nothing newer came in.
+    if (self->win.ws_col == shrunk.ws_col && self->win.ws_row == shrunk.ws_row) {
+      self->win.ws_col = size.ws_col;
+      self->win.ws_row = size.ws_row;
+    }
     [delegate deviceDidRecover];
   });
 }
