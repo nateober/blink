@@ -36,6 +36,46 @@ public final class FleetActivityController {
 
   public var isRunning: Bool { current != nil }
 
+  private var observing = false
+  private var startTokenTask: Task<Void, Never>?
+  private var adoptTask: Task<Void, Never>?
+
+  /// Called once at launch. Publishes the token a fleet host needs to start the activity by
+  /// push (iOS 17.2+), and picks up an activity started that way so its update token gets
+  /// published too. iOS wakes the app in the background for both.
+  public func startObserving() {
+    guard !observing else { return }
+    observing = true
+    if #available(iOS 17.2, *) {
+      startTokenTask = Task { [weak self] in
+        for await tokenData in Activity<FleetActivityAttributes>.pushToStartTokenUpdates {
+          let hex = tokenData.map { String(format: "%02x", $0) }.joined()
+          await self?.publish(hex, as: "activity-start-token")
+        }
+      }
+    }
+    adoptTask = Task { [weak self] in
+      for await activity in Activity<FleetActivityAttributes>.activityUpdates {
+        self?.adopt(activity)
+      }
+    }
+  }
+
+  /// Follow an activity this controller didn't start (a remote start, or one that outlived
+  /// the last launch).
+  private func adopt(_ activity: Activity<FleetActivityAttributes>) {
+    guard activity.id != current?.id else { return }
+    guard activity.activityState == .active || activity.activityState == .stale else { return }
+    current = activity
+    tokenTask?.cancel()
+    tokenTask = Task { [weak self] in
+      for await tokenData in activity.pushTokenUpdates {
+        let hex = tokenData.map { String(format: "%02x", $0) }.joined()
+        await self?.publishActivityToken(hex)
+      }
+    }
+  }
+
   /// Start (replacing any current) a Live Activity for a fleet session, requesting a push token.
   public func start(host: String, label: String, status: String, detail: String) throws {
     guard ActivityAuthorizationInfo().areActivitiesEnabled else { throw FleetActivityError.disabled }
@@ -74,11 +114,27 @@ public final class FleetActivityController {
   /// Best-effort publish of the activity push token to ~/.blink-notify/activity-token on the
   /// fleet host (mirrors PushRegistrar's device-token publish). Guarded to valid hex.
   private func publishActivityToken(_ hex: String) async {
+    await publish(hex, as: "activity-token")
+  }
+
+  /// Writes a token to ~/.blink-notify/<name> on the fleet host. `name` is one of ours, and
+  /// the token is checked to be hex, so nothing in the command comes from outside.
+  private func publish(_ hex: String, as name: String) async {
     guard !hex.isEmpty, hex.allSatisfy(\.isHexDigit) else { return }
+    guard ["activity-token", "activity-start-token"].contains(name) else { return }
     let alias = ["push-notify", "ada"].first { BKHostsExists($0) }
     guard let alias else { return }
-    let cmd = "mkdir -p ~/.blink-notify && printf '%s' '\(hex)' > ~/.blink-notify/activity-token"
+    let cmd = "mkdir -p ~/.blink-notify && printf '%s' '\(hex)' > ~/.blink-notify/\(name)"
     _ = try? await HeadlessSSHRunner.run(alias: alias, command: cmd, acceptUnknownHostKeys: true)
+  }
+}
+
+/// What AppDelegate (Objective-C) calls at launch.
+@objc public final class FleetActivityBridge: NSObject {
+  @objc public static func startObserving() {
+    if #available(iOS 16.1, *) {
+      FleetActivityController.shared.startObserving()
+    }
   }
 }
 

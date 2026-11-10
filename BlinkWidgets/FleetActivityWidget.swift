@@ -36,6 +36,8 @@ struct FleetActivityWidget: Widget {
       }
       .padding()
       .activityBackgroundTint(Color.black.opacity(0.25))
+      // A tap opens Blink on the session switcher.
+      .widgetURL(URL(string: "blinkshell://sessions"))
     } dynamicIsland: { context in
       DynamicIsland {
         DynamicIslandExpandedRegion(.leading) {
@@ -57,6 +59,7 @@ struct FleetActivityWidget: Widget {
       } minimal: {
         Image(systemName: icon(context.state.status)).foregroundStyle(tint(context.state.status))
       }
+      .widgetURL(URL(string: "blinkshell://sessions"))
     }
   }
 

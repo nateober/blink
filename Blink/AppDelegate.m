@@ -128,6 +128,8 @@ void __setupProcessEnv(void) {
 
   // fleet-native: register for remote (APNs) notifications for agent-attention pushes.
   [[PushRegistrar shared] requestAndRegister];
+  // fleet-native: let a fleet host start and update the lock-screen activity by push.
+  [FleetActivityBridge startObserving];
 
 //  [nc addObserver:self selector:@selector(_logEvent:) name:nil object:nil];
 //  [nc addObserver:self selector:@selector(_active) name:@"UIApplicationSystemNavigationActionChangedNotification" object:nil];
