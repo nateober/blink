@@ -164,7 +164,13 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
    */
   func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
 
-    if let sessionLink = URLContexts.first(where: { $0.url.scheme?.lowercased() == "blinkshell" })?.url {
+    if let sessions = URLContexts.first(where: {
+      $0.url.scheme?.lowercased() == "blinkshell" && $0.url.host?.lowercased() == "sessions"
+    })?.url {
+      // A tap on the lock-screen activity. It only shows a list, so it needs no signature.
+      _ = sessions
+      DispatchQueue.main.async { self._spCtrl.showSessionsAction() }
+    } else if let sessionLink = URLContexts.first(where: { $0.url.scheme?.lowercased() == "blinkshell" })?.url {
       _handleSessionLink(with: sessionLink)
     } else if let sshUrlScheme = URLContexts.first(where: { $0.url.scheme == "ssh" })?.url {
       _handleSshUrlScheme(with: sshUrlScheme)
