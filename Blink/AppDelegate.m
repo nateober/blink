@@ -380,6 +380,11 @@ configurationForConnectingSceneSession:(UISceneSession *)connectingSceneSession
   UNNotificationContent *content = notification.request.content;
   [[NotificationInbox shared] recordWithTitle:content.title body:content.body userInfo:content.userInfo];
   UNNotificationPresentationOptions opts = UNNotificationPresentationOptionSound | UNNotificationPresentationOptionList | UNNotificationPresentationOptionBanner | UNNotificationPresentationOptionBadge;
+  // fleet-native: an agent push about the session on screen, or one that only says an agent
+  // finished, goes to the list without a banner or a sound.
+  if (![AgentPush showsBannerFor:content.userInfo]) {
+    opts = UNNotificationPresentationOptionList;
+  }
   completionHandler(opts);
 }
 
@@ -391,6 +396,17 @@ configurationForConnectingSceneSession:(UISceneSession *)connectingSceneSession
   SceneDelegate *sceneDelegate = (SceneDelegate *)response.targetScene.delegate;
 
   SpaceController *ctrl = sceneDelegate.spaceController;
+
+  // fleet-native: an agent push names a host and a tmux session; go to that session.
+  NSDictionary *blink = content.userInfo[@"blink"];
+  NSString *host = [blink isKindOfClass:[NSDictionary class]] ? blink[@"host"] : nil;
+  NSString *session = [blink isKindOfClass:[NSDictionary class]] ? blink[@"session"] : nil;
+  if ([host isKindOfClass:[NSString class]] && [session isKindOfClass:[NSString class]]
+      && host.length > 0 && session.length > 0) {
+    [sceneDelegate deliverAgentSessionWithHost:host session:session];
+    completionHandler();
+    return;
+  }
 
   [ctrl moveToShellWithKey:response.notification.request.content.threadIdentifier];
 

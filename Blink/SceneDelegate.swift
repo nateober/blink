@@ -94,6 +94,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
   /// user unlocks, never before. `trusted` is set for Shortcuts the user built.
   /// Held for a minute at most: a link the user walked away from must not run hours later.
   private var _pendingSessionLink: (link: SessionLink, trusted: Bool, at: Date)? = nil
+  private var _pendingAgentSession: (host: String, session: String, at: Date)? = nil
   private var _spCtrl = SpaceController()
   private var paywallWindow: UIWindow? = nil
 
@@ -345,6 +346,13 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
       }
     }
 
+    if let pending = _pendingAgentSession {
+      _pendingAgentSession = nil
+      if Date().timeIntervalSince(pending.at) < 60 {
+        DispatchQueue.main.async { self.deliverAgentSession(host: pending.host, session: pending.session) }
+      }
+    }
+
     guard let term = spCtrl.currentTerm() else {
       return
     }
@@ -476,6 +484,16 @@ extension SceneDelegate {
     case .failure(let error):
       _spCtrl.showAlert(msg: "This link can't be opened: \(SceneDelegate._describe(error)).")
     }
+  }
+
+  /// A tap on an agent push: go to the tab attached to that tmux session, or open one.
+  /// Held until the app lock is cleared, like a session link.
+  @objc func deliverAgentSession(host: String, session: String) {
+    if LocalAuth.shared.lockRequired || _lockCtrl != nil {
+      _pendingAgentSession = (host, session, Date())
+      return
+    }
+    _spCtrl.openAgentSession(host: host, session: session)
   }
 
   /// Opens a session link now, or holds it until the app lock is cleared.

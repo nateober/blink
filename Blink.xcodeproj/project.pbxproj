@@ -77,6 +77,7 @@
 		11DE4E97AD77A47E258C9685 /* NotificationInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F742FBB5A70262436FFCB3 /* NotificationInbox.swift */; };
 		132041B39AA062301DE04BBA /* VoiceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E8D47CFBFA30199A43C2CB2 /* VoiceEngine.swift */; };
 		23E148FE8ADC216F4B6FB3BF /* ExitTrailer.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE948F3BADB540C3A2F0504 /* ExitTrailer.swift */; };
+		25254BEF9C7EEEAB53F8D454 /* AgentRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 481D4E139A24BF4B051CEA0E /* AgentRules.swift */; };
 		28634BA48A4F86F0917FD27C /* notiflog.swift in Sources */ = {isa = PBXBuildFile; fileRef = B87A4459AAA1A9144D431E7F /* notiflog.swift */; };
 		2F014B9599FEE37ED074EFB4 /* MountManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 550C417C8BDEA43D0FFEA49A /* MountManager.swift */; };
 		31ED4D83B18855E895CE085E /* BookmarkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E1C44F987CE1CC429490D9E /* BookmarkStore.swift */; };
@@ -500,6 +501,7 @@
 		D2FCB4DD2339F9DB00A88108 /* UIScrollView+Paging.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2FCB4DC2339F9DB00A88108 /* UIScrollView+Paging.swift */; };
 		DAEE42ADBB621EEC06BB2B5B /* PathManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E566472EA570311187C36EB5 /* PathManager.swift */; };
 		DB244D13BE1F58840AA7DDF3 /* BlinkIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17E04BBB954D0172C23E5928 /* BlinkIntents.swift */; };
+		E0684AF8804823C21B96324B /* AgentSessions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71B2452BB23646A5AE5E24D8 /* AgentSessions.swift */; };
 		FF9D45DDB1C76A8B1479A403 /* PushRegistrar.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA82458DB0E808054C4BFB1B /* PushRegistrar.swift */; };
 /* End PBXBuildFile section */
 
@@ -874,12 +876,14 @@
 		3E8D47CFBFA30199A43C2CB2 /* VoiceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceEngine.swift; path = Blink/Voice/VoiceEngine.swift; sourceTree = SOURCE_ROOT; };
 		3E9C41B486B94B1C5178AA29 /* PushModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PushModels.swift; path = tools/FleetCore/Sources/FleetCore/PushModels.swift; sourceTree = SOURCE_ROOT; };
 		443B4ADF9B78FAA292574814 /* LinkActionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LinkActionsView.swift; path = Settings/ViewControllers/LinkActionsView.swift; sourceTree = SOURCE_ROOT; };
+		481D4E139A24BF4B051CEA0E /* AgentRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AgentRules.swift; path = tools/FleetCore/Sources/FleetCore/AgentRules.swift; sourceTree = SOURCE_ROOT; };
 		49BA4FF4A8C380146CF6DBAD /* liveactivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = liveactivity.swift; path = Blink/Commands/liveactivity.swift; sourceTree = SOURCE_ROOT; };
 		550C417C8BDEA43D0FFEA49A /* MountManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MountManager.swift; path = tools/FleetCore/Sources/FleetCore/MountManager.swift; sourceTree = SOURCE_ROOT; };
 		563A4C6B82F6FED5F85338BB /* mounts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = mounts.swift; path = Blink/Commands/mounts.swift; sourceTree = SOURCE_ROOT; };
 		5E354EEAA61AE943A07768C9 /* VoiceRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceRules.swift; path = tools/FleetCore/Sources/FleetCore/VoiceRules.swift; sourceTree = SOURCE_ROOT; };
 		697C48E6817F4665CE9878A6 /* fleetexec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = fleetexec.swift; path = Blink/Commands/fleetexec.swift; sourceTree = SOURCE_ROOT; };
 		6E054A09A32F00207C78D5E1 /* TabStripView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TabStripView.swift; path = Blink/TabStripView.swift; sourceTree = SOURCE_ROOT; };
+		71B2452BB23646A5AE5E24D8 /* AgentSessions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AgentSessions.swift; path = Blink/Fleet/AgentSessions.swift; sourceTree = SOURCE_ROOT; };
 		803B99D62582869200DC99C8 /* BKNotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BKNotificationsView.swift; sourceTree = "<group>"; };
 		803B99E2258381B200DC99C8 /* SettingsHostingController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsHostingController.swift; sourceTree = "<group>"; };
 		85A34303200A837A009324F1 /* webfontloader.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = webfontloader.js; sourceTree = "<group>"; };
@@ -3753,6 +3757,8 @@
 				618A44019CF0250DA3A16A55 /* TabStripRules.swift in Sources */,
 				92F540AE9F20977B4DB133FA /* TabStripView.swift in Sources */,
 				C74A44A99EB2F473913487F5 /* TerminalViewRules.swift in Sources */,
+				E0684AF8804823C21B96324B /* AgentSessions.swift in Sources */,
+				25254BEF9C7EEEAB53F8D454 /* AgentRules.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

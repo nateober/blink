@@ -1570,6 +1570,37 @@ extension SpaceController {
     }
   }
 
+  /// The window title of each tab, in tab order. A tab not loaded since launch answers with
+  /// the tmux title it last had.
+  func agentTabTitles() -> [String?] {
+    _viewportsKeys.map { key in
+      let term: TermController? = SessionRegistry.shared.sessionFromIndexWith(key: key)
+      return AgentTabTitles.title(for: key, live: term?.termDevice.view?.title)
+    }
+  }
+
+  /// The title of the tab on screen.
+  @objc func frontTabTitle() -> String? {
+    currentDevice?.view?.title
+  }
+
+  /// Goes to the tab attached to a tmux session on a fleet host, or opens one. What a tap
+  /// on an agent push and a pick in the session switcher both do.
+  @objc func openAgentSession(host: String, session: String) {
+    let route = AgentRoute.decide(
+      host: host, session: session,
+      alias: FleetHosts.alias(for: host),
+      titles: agentTabTitles())
+    switch route {
+    case .focus(let index):
+      _moveToShell(idx: index)
+    case .open(let command):
+      _newShellAction(command: command)
+    case .ignore:
+      _showNote("No host entry for \(host)")
+    }
+  }
+
   @objc func runShellSessionIntent(command: String = "") {
     // Callers reach here both on the main thread (the in-app "Create" tab menu
     // action) and potentially off it (URL / App-Intent entry points). A bare
