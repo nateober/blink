@@ -121,8 +121,10 @@ def test_quiet_push_payload_and_remote_start():
     quiet = notify(["--token", "ab12", "--title", "T", "--quiet"])
     assert quiet["aps"]["interruption-level"] == "passive"
     assert "sound" not in quiet["aps"]
+    assert "content-available" not in quiet["aps"]  # a finished turn must not wake the app
     loud = notify(["--token", "ab12", "--title", "T"])
     assert loud["aps"]["sound"] == "default"
+    assert loud["aps"]["content-available"] == 1
     start = notify(["--token", "ab12", "--live-activity-event", "start", "--host", "ada",
                     "--session", "agents", "--la-status", "running", "--la-detail", "blink"])
     assert start["aps"]["event"] == "start"
@@ -131,3 +133,28 @@ def test_quiet_push_payload_and_remote_start():
     assert start["aps"]["alert"]["body"] == "blink"
     # Seconds since 2001, which is what ActivityKit's decoder expects for a Date.
     assert start["aps"]["content-state"]["updatedAt"] < 1_000_000_000
+
+
+def test_activity_waits_before_starting_and_ending():
+    run, ask = ("running", "a"), ("needs input", "a")
+    plan = bf.plan_activity
+    # A turn that has only just begun doesn't start one; after the wait it does.
+    assert plan(run, "", False, True, 0, False) == "wait-start"
+    assert plan(run, "", False, True, 0, True) == "start"
+    # Waiting on the user starts at once.
+    assert plan(ask, "", False, True, 0, False) == "start"
+    # Nothing running: hold the one on screen for a while, then end it.
+    assert plan(None, "running\ta", True, True, 500, False) == "wait-end"
+    assert plan(None, "running\ta", True, True, 500, True) == "end"
+    assert plan(None, "", False, True, 0, False) == "none"
+    # The next turn began inside the wait: nothing is sent at all.
+    assert plan(run, "running\ta", True, True, 500, True) == "none"
+    assert plan(ask, "running\ta", True, True, 500, False) == "update"
+    # Started a moment ago and the phone hasn't published the token yet.
+    assert plan(ask, "running\ta", False, True, 30, False) == "none"
+    assert plan(ask, "", False, False, 0, False) == "none"
+
+
+def test_notify_does_not_run_inside_a_project():
+    first = (pathlib.Path(bf.__file__).parent / "blink_notify.py").read_text().splitlines()[0]
+    assert "--no-project" in first
