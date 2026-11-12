@@ -161,6 +161,7 @@ static int __sizeOfIncompleteSequenceAtTheEnd(const char *buffer, size_t len) {
   
   dispatch_semaphore_t _readlineSema;
   NSString *_readlineResult;
+  NSString *_promptCommand;
 }
 
 // Make win accesible on Swift
@@ -323,6 +324,7 @@ static int __sizeOfIncompleteSequenceAtTheEnd(const char *buffer, size_t len) {
   
   NSData *data = [NSJSONSerialization dataWithJSONObject:dict options:kNilOptions error:nil];
   NSString *cmd = [NSString stringWithFormat: @"\x1b]1337;BlinkPrompt=%@\x07", [data base64EncodedStringWithOptions:kNilOptions]];
+  _promptCommand = cmd;
   
   fprintf(_stream.out, "%s", cmd.UTF8String);
 }
@@ -451,6 +453,11 @@ static int __sizeOfIncompleteSequenceAtTheEnd(const char *buffer, size_t len) {
 // tmux and full-screen programs draw everything again.
 - (void)viewDidRecover:(struct winsize)size
 {
+  // A local prompt lives in the page, and the new page doesn't have it: show it again.
+  if (!_rawMode && _promptCommand && _stream.out) {
+    fprintf(_stream.out, "%s", _promptCommand.UTF8String);
+    fflush(_stream.out);
+  }
   id delegate = _delegate;
   if (![delegate respondsToSelector:@selector(deviceDidRecover)]) {
     return;

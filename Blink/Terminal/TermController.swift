@@ -506,6 +506,19 @@ extension TermController: TermDeviceDelegate {
     
   public func deviceDidRecover() {
     _resizePending = false
+    // Coming back to the app asks the tab on screen to resume its session, but that is
+    // skipped while the page isn't ready, and a page that died in the background isn't.
+    // Do it now that the page is back, or the tab stays blank and takes no input.
+    if view.window?.windowScene?.activationState == .foregroundActive {
+      if _sessionPayload != nil {
+        _startSession()
+      }
+      resumeIfNeeded()
+      // Taking the keyboard also waits for the page to be ready (see activateInput).
+      if isAttached {
+        _becomeFirstResponder()
+      }
+    }
     _session?.sigwinch()
   }
 
@@ -608,6 +621,12 @@ extension TermController: SuspendableSession {
   func resumeIfNeeded() {
     guard _termDevice.isReady else { return }
     SessionRegistry.shared.resumeIfNeeded(session: self)
+    // A restored tab whose saved session is missing or unreadable has nothing to run and
+    // would sit blank and take no input for good. Give it a shell.
+    if _sessionPayload == nil, UIApplication.shared.isProtectedDataAvailable {
+      _sessionPayload = MCPSessionPayload(params: MCPParams())
+      _startSession()
+    }
   }
 
   func resume(with unarchiver: NSKeyedUnarchiver) {
