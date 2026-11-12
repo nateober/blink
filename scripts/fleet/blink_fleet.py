@@ -18,6 +18,7 @@ State lives in ~/.blink-notify/:
   token         the phone's APNs device token (Blink publishes it)
   state/<hex>   "<state>\t<epoch>\t<message>" for each tmux session with an agent
 """
+import fcntl
 import json
 import os
 import subprocess
@@ -34,6 +35,11 @@ WATCHING_SECS = 20
 STALE_SECS = 3 * 86400
 # After a remote start, how long to wait for the phone to publish the new activity's token.
 START_GRACE_SECS = 120
+# Every start by push wakes the app on the phone, and an agent's turn is often a few seconds.
+# So an activity starts only once agents have been running this long (one that needs input
+# starts at once), and ends only after this long with nothing running.
+START_DELAY_SECS = 45
+END_DELAY_SECS = 120
 
 NEEDS_INPUT, DONE, RUNNING = "needs_input", "done", "running"
 
@@ -336,52 +342,91 @@ def cmd_push(argv):
              "--collapse-id", f"{host}.{session_hex}"[:64]]
     if kind == "quiet":
         extra.append("--quiet")
-    return subprocess.run(notify_argv(cfg, token, extra), timeout=60).returncode
+    return run_notify(notify_argv(cfg, token, extra))
 
 
-def cmd_activity():
+def plan_activity(summary, shown, has_token, has_start, marker_age, waited):
+    """What to do about the lock-screen activity: "none", "end", "update", "start", or
+    "wait-start" / "wait-end" (look again after the delay; `waited` says that was done)."""
+    if summary is None:
+        if not shown:
+            return "none"
+        return "end" if waited else "wait-end"
+    if f"{summary[0]}\t{summary[1]}" == shown:
+        return "none"
+    if has_token and shown:
+        return "update"
+    if shown and marker_age < START_GRACE_SECS:
+        return "none"  # started a moment ago; the phone hasn't published the new token yet
+    if not has_start:
+        return "none"  # the phone hasn't offered a way to start one (older iOS, or turned off)
+    if summary[0] == "running" and not waited:
+        return "wait-start"
+    return "start"
+
+
+def cmd_activity(sleep=time.sleep):
     """Bring the lock-screen activity in line with what the agents are doing."""
     cfg = config()
     if not cfg.get("p8"):
         return 0
-    summary = summarize(all_states(), time.time())
+    HOME.mkdir(parents=True, exist_ok=True)
+    lock = (HOME / "activity.lock").open("w")
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        return 0  # another run is already settling it and will see the newest states
     marker = HOME / "activity-shown"
-    token = read_token("activity-token")
-    shown = marker.read_text().strip() if marker.exists() else ""
-    if summary is None:
-        if token and shown:
-            subprocess.run(notify_argv(cfg, token, ["--live-activity-event", "end"]), timeout=60)
-        marker.unlink(missing_ok=True)
-        (HOME / "activity-token").unlink(missing_ok=True)
-        return 0
-    status, detail = summary
-    wanted = f"{status}\t{detail}"
-    if wanted == shown:
-        return 0
-    la = ["--la-status", status, "--la-detail", detail]
-    if token and shown:
-        rc = subprocess.run(notify_argv(cfg, token, ["--live-activity-event", "update", *la]),
-                            timeout=60).returncode
-        if rc != 0:
-            # The activity that token belonged to is gone; start a fresh one next time.
+    waited = False
+    for _ in range(8):
+        summary = summarize(all_states(), time.time())
+        token = read_token("activity-token")
+        shown = marker.read_text().strip() if marker.exists() else ""
+        age = time.time() - marker.stat().st_mtime if marker.exists() else 0
+        plan = plan_activity(summary, shown, bool(token), bool(read_token("activity-start-token")),
+                             age, waited)
+        if plan == "none":
+            return 0
+        if plan == "wait-start":
+            sleep(START_DELAY_SECS)
+            waited = True
+            continue
+        if plan == "wait-end":
+            sleep(END_DELAY_SECS)
+            waited = True
+            continue
+        waited = False
+        if plan == "end":
+            if token:
+                run_notify(notify_argv(cfg, token, ["--live-activity-event", "end"]))
             marker.unlink(missing_ok=True)
             (HOME / "activity-token").unlink(missing_ok=True)
-            return rc
-    elif shown and time.time() - marker.stat().st_mtime < START_GRACE_SECS:
-        return 0  # started a moment ago; the phone hasn't published the new token yet
-    else:
-        start = read_token("activity-start-token")
-        if not start:
-            return 0  # the phone hasn't offered a way to start one (older iOS, or turned off)
-        host = os.uname().nodename.split(".")[0].lower()
-        (HOME / "activity-token").unlink(missing_ok=True)
-        rc = subprocess.run(notify_argv(cfg, start, ["--live-activity-event", "start",
-                                                     "--host", host, "--session", "agents", *la]),
-                            timeout=60).returncode
-        if rc != 0:
-            return rc
-    marker.write_text(wanted)
+            continue
+        status, detail = summary
+        la = ["--la-status", status, "--la-detail", detail]
+        if plan == "update":
+            rc = run_notify(notify_argv(cfg, token, ["--live-activity-event", "update", *la]))
+            if rc != 0:
+                # The activity that token belonged to is gone; start a fresh one next time.
+                marker.unlink(missing_ok=True)
+                (HOME / "activity-token").unlink(missing_ok=True)
+                return rc
+        else:
+            host = os.uname().nodename.split(".")[0].lower()
+            (HOME / "activity-token").unlink(missing_ok=True)
+            rc = run_notify(notify_argv(cfg, read_token("activity-start-token"),
+                                        ["--live-activity-event", "start",
+                                         "--host", host, "--session", "agents", *la]))
+            if rc != 0:
+                return rc
+        marker.write_text(f"{status}\t{detail}")
     return 0
+
+
+def run_notify(argv):
+    """Runs blink_notify from the home directory: `uv run` in an agent's project directory
+    would pick up that project's Python requirement and refuse to start."""
+    return subprocess.run(argv, timeout=60, cwd=str(Path.home())).returncode
 
 
 def main():

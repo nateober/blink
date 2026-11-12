@@ -63,6 +63,7 @@ struct winsize __winSizeFromJSON(NSDictionary *json) {
   
   BOOL _jsIsBusy;
   BOOL _recovering;
+  BOOL _reloadWhenForeground;
   dispatch_queue_t _jsQueue;
   NSMutableString *_jsBuffer;
   CGRect _currentBounds;
@@ -285,6 +286,30 @@ struct winsize __winSizeFromJSON(NSDictionary *json) {
     _jsIsBusy = NO;
     _jsBuffer = [[NSMutableString alloc] init];
   });
+  // Not while the app is in the background (a push can wake it there): a new page process
+  // for every tab is memory iOS takes the whole app for. Wait until the app comes forward.
+  if (UIApplication.sharedApplication.applicationState == UIApplicationStateBackground) {
+    if (!_reloadWhenForeground) {
+      _reloadWhenForeground = YES;
+      NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
+      [nc addObserver:self selector:@selector(_reloadAfterBackground) name:UIApplicationWillEnterForegroundNotification object:nil];
+      [nc addObserver:self selector:@selector(_reloadAfterBackground) name:UISceneWillEnterForegroundNotification object:nil];
+      [nc addObserver:self selector:@selector(_reloadAfterBackground) name:UIApplicationDidBecomeActiveNotification object:nil];
+    }
+    return;
+  }
+  [_webView reload];
+}
+
+- (void)_reloadAfterBackground {
+  if (!_reloadWhenForeground) {
+    return;
+  }
+  _reloadWhenForeground = NO;
+  NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
+  [nc removeObserver:self name:UIApplicationWillEnterForegroundNotification object:nil];
+  [nc removeObserver:self name:UISceneWillEnterForegroundNotification object:nil];
+  [nc removeObserver:self name:UIApplicationDidBecomeActiveNotification object:nil];
   [_webView reload];
 }
 
@@ -639,6 +664,9 @@ static NSString * _sanitizeTextForClipboard(NSString *text);
 // Write data to terminal control
 - (void)write:(NSString *)data
 {
+  if (_recovering) {
+    return;  // no page to draw on; the session redraws once it is back
+  }
   dispatch_async(_jsQueue, ^{
     [_jsBuffer appendString:data];
     
@@ -661,6 +689,9 @@ static NSString * _sanitizeTextForClipboard(NSString *text);
 
 - (void)writeB64:(NSData *)data
 {
+  if (_recovering) {
+    return;
+  }
   dispatch_async(_jsQueue, ^{
     _jsIsBusy = YES;
 

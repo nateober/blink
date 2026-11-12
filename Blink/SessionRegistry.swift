@@ -149,6 +149,11 @@ protocol SuspendableSession: class {
     guard session.meta.isSuspended else {
       return
     }
+    // While the phone is locked the saved state can't be read. Leave the session marked
+    // suspended so the next try, after unlock, restores it instead of finding nothing.
+    guard UIApplication.shared.isProtectedDataAvailable else {
+      return
+    }
 
     _resume(forKey: session.meta.key)
     session.meta.isSuspended = false

@@ -56,7 +56,8 @@ public final class FleetActivityController {
     }
     adoptTask = Task { [weak self] in
       for await activity in Activity<FleetActivityAttributes>.activityUpdates {
-        self?.adopt(activity)
+        // On the main thread, where start, update and end already touch `current`.
+        await MainActor.run { self?.adopt(activity) }
       }
     }
   }

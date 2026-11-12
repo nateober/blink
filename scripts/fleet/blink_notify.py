@@ -1,4 +1,4 @@
-#!/usr/bin/env -S uv run --quiet --with PyJWT --with cryptography --with httpx[http2] --python 3.12 --
+#!/usr/bin/env -S uv run --quiet --no-project --with PyJWT --with cryptography --with httpx[http2] --python 3.12 --
 """blink-notify — send an agent-attention push to the Blink iOS app via APNs.
 
 Meant to run on a fleet host (Ada/Vera/Max), invoked from a `claude -p` wrapper when
@@ -22,14 +22,17 @@ def build_payload(args):
     if args.session: blink["session"] = args.session
     alert = {"title": args.title}
     if args.body: alert["body"] = args.body
-    # content-available wakes a backgrounded/suspended app so it can record the push to its
-    # inbox even before the user taps the banner (didReceiveRemoteNotification). A force-quit
-    # app still won't wake — iOS doesn't deliver background pushes to terminated apps.
-    aps = {"alert": alert, "content-available": 1}
+    aps = {"alert": alert}
     if args.quiet:
-        # Lands in Notification Center without sound, banner or waking the screen.
+        # Lands in Notification Center without sound, banner or waking the screen. It does
+        # not wake the app either: an agent finishes a turn every few minutes, and each
+        # wake costs the phone memory and battery.
         aps["interruption-level"] = "passive"
     else:
+        # content-available wakes a backgrounded/suspended app so it can record the push to
+        # its inbox even before the user taps the banner (didReceiveRemoteNotification). A
+        # force-quit app still won't wake.
+        aps["content-available"] = 1
         aps["sound"] = "default"
     return {"aps": aps, "blink": blink}
 
