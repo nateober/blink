@@ -226,4 +226,9 @@ sessions started before the install don't have the hooks; restart one to test.
 
 - [ ] Leave Blink in the background long enough (or under memory pressure) that the terminal
       would have come back blank: it reloads and the session redraws within a few seconds.
+- [ ] Build 1127: after that, typing reaches the session without tapping or switching tabs,
+      and a local `blink>` tab shows its prompt again.
+- [ ] Build 1127: over a day of agents running on Ada, Blink is not killed in the background
+      (coming back does not start the app over). If it is, send the log named in
+      `docs/bugs.md` (2026-11-12).
 
