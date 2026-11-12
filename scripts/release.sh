@@ -91,7 +91,8 @@ fi
 echo ">> Upload succeeded (build $BUILD_NUM)."
 
 echo ">> Waiting for ASC processing, then attaching to internal group…"
-uv run --quiet --with PyJWT --with cryptography --with requests --python 3.12 python - "$BUILD_NUM" <<PY
+ATTACH_RC=0
+uv run --quiet --with PyJWT --with cryptography --with requests --python 3.12 python - "$BUILD_NUM" <<PY || ATTACH_RC=$?
 import sys, time
 sys.path.insert(0, "$REPO/scripts")
 from asc_api import call
@@ -107,6 +108,7 @@ while time.time() < deadline:
     time.sleep(120)
 else:
     print(">> Timed out waiting for processing; attach manually later.", file=sys.stderr)
+    sys.exit(3)
 PY
 
 # Receipt to Nate's phone: one Catch push with the build, what changed (git log since the
@@ -114,6 +116,9 @@ PY
 # build/ship-notes.txt before releasing ("test: …", "known: …", "changed:" + lines); it is
 # renamed .sent once delivered. Only on a confirmed upload.
 if grep -q "EXPORT SUCCEEDED" build/export.log 2>/dev/null && [[ -x "$HOME/bin/ship-receipt" ]]; then
-  "$HOME/bin/ship-receipt" --app "Blink" --version "build $BUILD_NUM" --repo "$REPO" \
+  # Say so when Apple was still processing: the build is not installable yet.
+  RECEIPT_VERSION="build $BUILD_NUM"
+  [[ "$ATTACH_RC" -ne 0 ]] && RECEIPT_VERSION="build $BUILD_NUM (uploaded, Apple still processing, not in TestFlight yet)"
+  "$HOME/bin/ship-receipt" --app "Blink" --version "$RECEIPT_VERSION" --repo "$REPO" \
     --notes "$REPO/build/ship-notes.txt" || true
 fi
