@@ -326,6 +326,10 @@ extension TermController: SessionDelegate {
   public func sessionFinished() {
     self.delegate?.terminalHangup(control: self)
   }
+
+  public func sessionRestorableStateChanged() {
+    SessionRegistry.shared.saveRunning(session: self)
+  }
 }
 
 let _apiRoutes:[String: (MCPSession, String) -> AnyPublisher<String, Never>] = [
@@ -672,6 +676,13 @@ extension TermController: SuspendableSession {
 
     archiver.bk_encode(_termView.termUIState, for: ArchiveKey.termUIState)
     sessionPayload.encode(with: archiver)
+  }
+
+  func archiveRunningSession(with archiver: NSKeyedArchiver) -> Bool {
+    guard let sessionPayload = _sessionPayload else { return false }
+    archiver.bk_encode(_termView.termUIState, for: ArchiveKey.termUIState)
+    sessionPayload.encode(with: archiver)
+    return true
   }
 }
 

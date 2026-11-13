@@ -51,6 +51,8 @@ typedef id<BKSessionParamsSnapshotting, NSSecureCoding> BKSessionParams;
 @protocol SessionDelegate
 
 - (void)sessionFinished;
+/// What a relaunch needs to bring this session back has changed; save it now.
+- (void)sessionRestorableStateChanged;
 
 @end
 

@@ -98,9 +98,12 @@
       _childSession = mosh;
       [_childSession executeAttachedWithArgs:@""];
       _childSession = nil;
-      if (self.sessionParams.hasEncodedState) {
+      if (mosh.endedBySuspend || self.sessionParams.hasEncodedState) {
         return;
       }
+      // It ended for good (exit, detach, server gone): nothing to reconnect to.
+      self.sessionParams.reconnectCommand = nil;
+      [self restorableStateChanged];
     }
     if ([@"mosh1" isEqualToString:self.sessionParams.childSessionType] && self.sessionParams.hasEncodedState) {
       MoshSession *mosh = [[MoshSession alloc] initWithDevice:_device andParams:self.sessionParams.childSessionParams];
@@ -115,6 +118,21 @@
     NSString *initialCommand = self.sessionParams.initialCommand;
     if (initialCommand.length > 0) {
       [self enqueueCommand:initialCommand];
+      return;
+    }
+    // The app was killed while mosh was running, so there is no saved connection to pick
+    // up (a mosh client can't rejoin its server without the state it had). Run the same
+    // command again: a new connection, and tmux on the host puts the session back.
+    NSString *reconnect = self.sessionParams.reconnectCommand;
+    if (reconnect.length > 0) {
+      self.sessionParams.reconnectCommand = nil;
+      // Right after launch the page may not have measured itself yet, and the size is what
+      // the host's pty is created with. Wait for one (up to 5 s) before connecting.
+      for (int i = 0; i < 100 && (_device.cols <= 0 || _device.rows <= 0); i++) {
+        usleep(50000);
+      }
+      [_device writeOutLn:[NSString stringWithFormat:@"Reconnecting: %@", reconnect]];
+      [self enqueueCommand:reconnect skipHistoryRecord:YES];
       return;
     }
     #if TARGET_OS_MACCATALYST
@@ -187,8 +205,7 @@
   setlocale(LC_CTYPE, "UTF-8");
   
   if ([cmd isEqualToString:@"mosh"]) {
-    [self _runMoshWithArgs:cmdline];
-    if (self.sessionParams.hasEncodedState) {
+    if ([self _runMoshWithArgs:cmdline] || self.sessionParams.hasEncodedState) {
       return NO;
     }
   } else if ([cmd isEqualToString:@"mosh1"]) {
@@ -320,10 +337,21 @@
   _childSession = nil;
 }
 
-- (void)_runMoshWithArgs:(NSString *)args
+- (void)restorableStateChanged
+{
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [self.delegate sessionRestorableStateChanged];
+  });
+}
+
+/// Returns YES when mosh stopped because the session was suspended (it will be resumed).
+- (BOOL)_runMoshWithArgs:(NSString *)args
 {
   self.sessionParams.childSessionParams = [[MoshParams alloc] init];
   self.sessionParams.childSessionType = @"mosh";
+  // Saved once mosh is connected (BlinkMosh calls restorableStateChanged), so a relaunch
+  // after the app is killed can run it again.
+  self.sessionParams.reconnectCommand = args;
   BlinkMosh *mosh = [[BlinkMosh alloc] initWithMcpSession: self device:_device andParams:self.sessionParams.childSessionParams];
   //MoshSession *mosh = [[MoshSession alloc] initWithDevice:_device andParams:self.sessionParams.childSessionParams];
   //mosh.mcpSession = self;
@@ -334,6 +362,12 @@
   [_childSession executeAttachedWithArgs:str];
   
   _childSession = nil;
+  if (mosh.endedBySuspend) {
+    return YES;
+  }
+  self.sessionParams.reconnectCommand = nil;
+  [self restorableStateChanged];
+  return NO;
 }
 
 - (void)_runMosh1WithArgs:(NSString *)args

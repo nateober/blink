@@ -111,6 +111,14 @@ function term_setup(accessibilityEnabled) {
   t = new hterm.Terminal('blink');
 
   t.onTerminalReady = function() {
+    // hterm lays its grid out once for its built-in font size and takes the page's settings
+    // a moment later, so the size reported from here was for the wrong font: 43 columns on
+    // a phone, then 65 about 200 ms after. A restored session was told both, and tmux and
+    // whatever runs in it drew for the narrow one first (docs/bugs.md, 2026-11-13). Settle
+    // the grid for the real character size before anything hears a size.
+    try {
+      t.onResize_();
+    } catch (e) {}
     window.installKB(t, t.scrollPort_.screen_);
     term_setAutoCarriageReturn(true);
     term_setClipboardWrite(false);

@@ -83,6 +83,8 @@ enum MoshError: Error, LocalizedError {
   private let escapeKey: String
   private var logger: MoshLogger! = nil
   var isRunloopRunning = false
+  /// True once mosh has handed back its state for a suspend: it stopped to be resumed later.
+  @objc private(set) var endedBySuspend = false
 
   let stateCallback: mosh_state_callback = { (context, buffer, size) in
     guard let buffer = buffer, let context = context else {
@@ -134,6 +136,8 @@ enum MoshError: Error, LocalizedError {
       do {
         moshParams = try startMoshServer(using: command)
         self.copyToSession(moshParams: moshParams)
+        // Connected: from here a relaunch should bring this session back.
+        mcpSession.restorableStateChanged()
       } catch {
         return die(message: "\(error) - \(error.localizedDescription)")
       }
@@ -528,6 +532,7 @@ enum MoshError: Error, LocalizedError {
 
   func onStateEncoded(_ encodedState: Data) {
     self.sessionParams.putEncodedState(encodedState)
+    self.endedBySuspend = true
     print("Encoding session")
     if let sema = suspendSemaphore {
       sema.signal()

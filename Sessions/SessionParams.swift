@@ -130,7 +130,11 @@ public extension EncodedStateBacked {
   /// Consumed once inside `MCPSession.executeWithArgs:`.
   @objc var initialCommand: String? = nil
 
-  private enum Key: CodingKey { case childSessionType, childSessionParams }
+  /// The mosh command this session is running, kept so a relaunch after the app is killed
+  /// mid-session can run it again. Nil when no mosh is running.
+  @objc var reconnectCommand: String? = nil
+
+  private enum Key: CodingKey { case childSessionType, childSessionParams, reconnectCommand }
 
   override init() { super.init() }
 
@@ -140,6 +144,7 @@ public extension EncodedStateBacked {
   func encode(with coder: NSCoder) {
     coder.bk_encode(childSessionType, for: Key.childSessionType)
     coder.bk_encode(childSessionParams, for: Key.childSessionParams)
+    coder.bk_encode(reconnectCommand, for: Key.reconnectCommand)
   }
 
   required init?(coder: NSCoder) {
@@ -147,6 +152,7 @@ public extension EncodedStateBacked {
     self.childSessionType = coder.bk_decode(for: Key.childSessionType)
     // NOTE: include all known MCP children subclasses here for secure decoding
     self.childSessionParams = coder.bk_decode(of: [MoshParams.self], for: Key.childSessionParams)
+    self.reconnectCommand = coder.bk_decode(for: Key.reconnectCommand)
   }
 
   // MARK: - BKSessionParamsSnapshotting (forward)
