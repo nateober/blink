@@ -63,6 +63,7 @@ static int __sizeOfIncompleteSequenceAtTheEnd(const char *buffer, size_t len) {
 
 @interface ViewStream: NSObject
   @property TermView *view;
+  @property (copy) void (^observer)(const void *bytes, size_t length);
 @end
 
 @implementation ViewStream {
@@ -99,6 +100,11 @@ static int __sizeOfIncompleteSequenceAtTheEnd(const char *buffer, size_t len) {
     const void * buffer;
     size_t len;
     data = dispatch_data_create_map(data, &buffer, &len);
+
+    void (^observer)(const void *, size_t) = self.observer;
+    if (observer && len > 0) {
+      observer(buffer, len);
+    }
     
     NSString *output = [[NSString alloc] initWithBytes:buffer length:len encoding:NSUTF8StringEncoding];
     
@@ -271,6 +277,12 @@ static int __sizeOfIncompleteSequenceAtTheEnd(const char *buffer, size_t len) {
   [_stream close];
   [_outStream close];
   [_errStream close];
+}
+
+- (void)setOutputObserver:(void (^)(const void *, size_t))outputObserver
+{
+  _outputObserver = [outputObserver copy];
+  _outStream.observer = _outputObserver;
 }
 
 - (void)attachView:(TermView *)termView

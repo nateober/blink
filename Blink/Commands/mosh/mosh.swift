@@ -31,6 +31,7 @@
 
 import Combine
 import Dispatch
+import Network
 
 import SSH
 import ios_system
@@ -120,7 +121,7 @@ enum MoshError: Error, LocalizedError {
     // In Swift we need to cast.
     if let initialMoshParams = self.sessionParams as? MoshParams,
        initialMoshParams.hasEncodedState() {
-      return moshMain(initialMoshParams)
+      return moshMain(initialMoshParams, restored: true)
     } else {
       let command: MoshCommand
       do {
@@ -142,7 +143,7 @@ enum MoshError: Error, LocalizedError {
         return die(message: "\(error) - \(error.localizedDescription)")
       }
 
-      return moshMain(moshParams)
+      return moshMain(moshParams, restored: false)
     }
   }
 
@@ -244,16 +245,23 @@ enum MoshError: Error, LocalizedError {
       }
     }
 
-    return MoshParams(server: moshServerParams, client: moshClientParams)
+    let params = MoshParams(server: moshServerParams, client: moshClientParams)
+    params.sshPort = config.port
+    return params
   }
 
-  private func moshMain(_ moshParams: MoshParams) -> Int32 {
+  private func moshMain(_ moshParams: MoshParams, restored: Bool) -> Int32 {
     //print("moshMain active")
     
     let originalRawMode = device.rawMode
     self.device.rawMode = true
 
+    let watch = MoshWatch(device: device, mcpSession: mcpSession,
+                          host: moshParams.ip, sshPort: moshParams.sshPort, restored: restored)
+    watch.start()
+
     defer {
+      watch.stop()
       device.rawMode = originalRawMode
     }
 
@@ -560,6 +568,93 @@ extension MoshParams {
     self.predictionMode = String(describing: client.predictionMode)
     self.predictOverwrite = client.predictOverwrite
     self.serverPath = client.server
+  }
+}
+
+/// Watches a running mosh for a server that is gone for good (host rebooted, server timed
+/// out) and has the shell session connect again, and keeps track of the tmux session the
+/// tab is showing so the new connection lands in it. See `MoshLiveness` in FleetCore.
+final class MoshWatch {
+  private weak var device: TermDevice?
+  private weak var mcpSession: MCPSession?
+  private let host: String?
+  private let sshPort: UInt16
+  private let lock = NSLock()
+  private var liveness: MoshLiveness
+  private var timer: DispatchSourceTimer?
+  private var probe: NWConnection?
+  /// A reconnect has been asked for: this mosh is on its way out.
+  private var asked = false
+
+  init(device: TermDevice, mcpSession: MCPSession, host: String?, sshPort: String?, restored: Bool) {
+    self.device = device
+    self.mcpSession = mcpSession
+    self.host = host
+    self.sshPort = UInt16(sshPort ?? "") ?? 22
+    self.liveness = MoshLiveness(restored: restored)
+  }
+
+  func start() {
+    device?.outputObserver = { [weak self] bytes, length in
+      guard let self else { return }
+      // The banner sits at the start of a read; a full-screen repaint needn't be copied whole.
+      let head = [UInt8](UnsafeRawBufferPointer(start: bytes, count: min(length, 4096)))
+      let now = ProcessInfo.processInfo.systemUptime
+      self.lock.lock()
+      self.liveness.saw(head, length: length, at: now)
+      self.lock.unlock()
+    }
+    let timer = DispatchSource.makeTimerSource(queue: .main)
+    timer.schedule(deadline: .now() + 2, repeating: 2)
+    timer.setEventHandler { [weak self] in self?.check() }
+    timer.resume()
+    self.timer = timer
+  }
+
+  func stop() {
+    device?.outputObserver = nil
+    DispatchQueue.main.async { [timer, weak self] in
+      timer?.cancel()
+      self?.probe?.cancel()
+      self?.probe = nil
+    }
+    timer = nil
+  }
+
+  private func check() {
+    guard let mcpSession, !asked else { return }
+    if let session = TmuxTitle.parse(device?.view?.title)?.session,
+       mcpSession.sessionParams.reconnectSession != session {
+      mcpSession.sessionParams.reconnectSession = session
+      mcpSession.restorableStateChanged()
+    }
+
+    lock.lock()
+    let dead = liveness.looksDead(at: ProcessInfo.processInfo.systemUptime)
+    lock.unlock()
+    guard dead, probe == nil, let host, !host.isEmpty, let port = NWEndpoint.Port(rawValue: sshPort) else { return }
+
+    // No contact looks the same when the phone is offline. Only reconnect when the host
+    // itself answers.
+    let connection = NWConnection(host: NWEndpoint.Host(host), port: port, using: .tcp)
+    probe = connection
+    let finish: (Bool) -> Void = { [weak self, weak connection] reachable in
+      guard let self, let connection, self.probe === connection else { return }
+      connection.cancel()
+      self.probe = nil
+      if reachable {
+        self.asked = self.mcpSession?.reconnectChild() ?? false
+      }
+    }
+    connection.stateUpdateHandler = { state in
+      switch state {
+      case .ready: finish(true)
+      case .failed, .waiting: finish(false)
+      default: break
+      }
+    }
+    connection.start(queue: .main)
+    DispatchQueue.main.asyncAfter(deadline: .now() + 4) { finish(false) }
   }
 }
 
