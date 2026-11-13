@@ -23,6 +23,10 @@ App Store** (GPL code he doesn't own + App-Store-terms conflict + "Blink" tradem
 - **Build 1128** (2026-11-13): a mosh tab restored after the app was killed runs its command
   again instead of sitting on "mosh: Last contact", and the terminal page reports its real size
   when it starts (it used to say 43 columns, then 65, and tmux drew for both). Check: `tools/sim-mosh-restore.sh`.
+- **Build 1129** (2026-11-13): a mosh tab whose server is gone (host restarted, server timed
+  out) notices within about 25 s and connects again into the tmux session it was showing
+  (`MoshWatch`, `FleetCore/MoshRules.swift`); hosts end mosh-servers after 3 days without a
+  client (`MOSH_SERVER_NETWORK_TMOUT` in `~/.zshenv`). Check: `tools/sim-mosh-restore.sh dead`.
 - **Build 1125** fixed frozen rows and stale frames after an app switch. Bugs Nate reports go in
   `docs/bugs.md`.
 - `raw` is the baseline and holds everything shipped. `feat/tmux-key-config` (iPad tmux key +
@@ -31,9 +35,10 @@ App Store** (GPL code he doesn't own + App-Store-terms conflict + "Blink" tradem
   from branch `voice-key-upstream`. Changes the maintainer asks for go on that branch, not `raw`.
 
 ## Open items — these need NATE (surface them at the start of a fresh session)
-0. **Builds 1127 and 1128 on the phone**: does coming back still give a blank or dead tab, does
+0. **Builds 1127 to 1129 on the phone**: does coming back still give a blank or dead tab, does
    the app still get killed (if so, the phone's crash or jetsam log comes first, `docs/bugs.md`),
-   and does a killed mosh tab reconnect (MANUAL-TESTS Feature P)?
+   does a killed mosh tab reconnect (MANUAL-TESTS Feature P), and does a tab left for days or
+   across a host restart come back by itself (Feature Q)?
 1. **Device checks for the agent loop** (MANUAL-TESTS Features J to O): none of the push, SSH or
    microphone paths can be confirmed in the simulator.
 2. **Install the host side on Max** when it is online:
@@ -44,7 +49,7 @@ App Store** (GPL code he doesn't own + App-Store-terms conflict + "Blink" tradem
 ## Working here
 ```bash
 git checkout raw                              # baseline; branch new work off it
-swift test --package-path tools/FleetCore     # 110 tests = pure-logic verification path
+swift test --package-path tools/FleetCore     # 125 tests = pure-logic verification path
 uv run --with pytest pytest scripts/fleet -q   # host-side scripts (hook, push, session list)
 # build for sim: xcodebuild ... -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' ENABLE_DEBUG_DYLIB=NO
 #   (keep code signing ON: CODE_SIGNING_ALLOWED=NO drops the app-group entitlement → crash in Migrator at launch)
