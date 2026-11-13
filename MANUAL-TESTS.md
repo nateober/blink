@@ -232,3 +232,12 @@ sessions started before the install don't have the hooks; restart one to test.
       (coming back does not start the app over). If it is, send the log named in
       `docs/bugs.md` (2026-11-12).
 
+## Feature P: a mosh tab comes back after the app is killed
+
+- [ ] Build 1128: with a mosh + tmux tab open, get Blink killed (leave it in the background
+      under memory pressure, or it crashes). Opening it again shows "Reconnecting: mosh …"
+      and then the same tmux session, not a frozen screen with "mosh: Last contact".
+- [ ] Build 1128: after Blink is relaunched or a tab's page is reloaded, the agent's screen
+      in tmux is drawn once at the right width (no narrow, wrapped copy above it in the
+      scrollback).
+
