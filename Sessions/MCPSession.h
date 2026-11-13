@@ -54,6 +54,9 @@
 
 /// Saves what a relaunch needs to bring this session back (called off the main thread).
 - (void)restorableStateChanged;
+/// The running mosh has lost its server for good: end it and run its command again.
+/// Returns NO when there is nothing to reconnect or one was tried a moment ago.
+- (BOOL)reconnectChild;
 
 - (void)updateAllowedPaths;
 - (void)setActiveSession;

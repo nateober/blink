@@ -59,6 +59,8 @@
   dispatch_queue_t _sshQueue;
   TermStream *_cmdStream;
   NSString *_currentCmdLine;
+  NSString *_pendingReconnect;
+  NSTimeInterval _lastAutoReconnect;
 }
 
 @dynamic sessionParams;
@@ -103,7 +105,13 @@
       }
       // It ended for good (exit, detach, server gone): nothing to reconnect to.
       self.sessionParams.reconnectCommand = nil;
+      self.sessionParams.reconnectSession = nil;
       [self restorableStateChanged];
+      NSString *again = [self _takePendingReconnect];
+      if (again) {
+        [self enqueueCommand:again skipHistoryRecord:YES];
+        return;
+      }
     }
     if ([@"mosh1" isEqualToString:self.sessionParams.childSessionType] && self.sessionParams.hasEncodedState) {
       MoshSession *mosh = [[MoshSession alloc] initWithDevice:_device andParams:self.sessionParams.childSessionParams];
@@ -123,9 +131,10 @@
     // The app was killed while mosh was running, so there is no saved connection to pick
     // up (a mosh client can't rejoin its server without the state it had). Run the same
     // command again: a new connection, and tmux on the host puts the session back.
-    NSString *reconnect = self.sessionParams.reconnectCommand;
+    NSString *reconnect = self.sessionParams.reconnectCommandForSession;
     if (reconnect.length > 0) {
       self.sessionParams.reconnectCommand = nil;
+      self.sessionParams.reconnectSession = nil;
       // Right after launch the page may not have measured itself yet, and the size is what
       // the host's pty is created with. Wait for one (up to 5 s) before connecting.
       for (int i = 0; i < 100 && (_device.cols <= 0 || _device.rows <= 0); i++) {
@@ -205,8 +214,14 @@
   setlocale(LC_CTYPE, "UTF-8");
   
   if ([cmd isEqualToString:@"mosh"]) {
-    if ([self _runMoshWithArgs:cmdline] || self.sessionParams.hasEncodedState) {
-      return NO;
+    NSString *line = cmdline;
+    while (line) {
+      if ([self _runMoshWithArgs:line] || self.sessionParams.hasEncodedState) {
+        return NO;
+      }
+      // Ended on purpose by reconnectChild: go straight into the new connection, with no
+      // prompt in between to catch the keys.
+      line = [self _takePendingReconnect];
     }
   } else if ([cmd isEqualToString:@"mosh1"]) {
     [self _runMosh1WithArgs:cmdline];
@@ -337,6 +352,35 @@
   _childSession = nil;
 }
 
+- (BOOL)reconnectChild
+{
+  NSString *command = self.sessionParams.reconnectCommandForSession;
+  NSTimeInterval now = NSProcessInfo.processInfo.systemUptime;
+  if (command.length == 0 || !_childSession
+      || ![MCPParams allowsAutoReconnectWithLast:_lastAutoReconnect now:now]) {
+    return NO;
+  }
+  _lastAutoReconnect = now;
+  @synchronized (self) {
+    _pendingReconnect = command;
+  }
+  [_childSession kill];
+  return YES;
+}
+
+- (NSString *)_takePendingReconnect
+{
+  NSString *command;
+  @synchronized (self) {
+    command = _pendingReconnect;
+    _pendingReconnect = nil;
+  }
+  if (command) {
+    [_device writeOutLn:[NSString stringWithFormat:@"Reconnecting: %@", command]];
+  }
+  return command;
+}
+
 - (void)restorableStateChanged
 {
   dispatch_async(dispatch_get_main_queue(), ^{
@@ -352,6 +396,7 @@
   // Saved once mosh is connected (BlinkMosh calls restorableStateChanged), so a relaunch
   // after the app is killed can run it again.
   self.sessionParams.reconnectCommand = args;
+  self.sessionParams.reconnectSession = nil;
   BlinkMosh *mosh = [[BlinkMosh alloc] initWithMcpSession: self device:_device andParams:self.sessionParams.childSessionParams];
   //MoshSession *mosh = [[MoshSession alloc] initWithDevice:_device andParams:self.sessionParams.childSessionParams];
   //mosh.mcpSession = self;
@@ -366,6 +411,7 @@
     return YES;
   }
   self.sessionParams.reconnectCommand = nil;
+  self.sessionParams.reconnectSession = nil;
   [self restorableStateChanged];
   return NO;
 }

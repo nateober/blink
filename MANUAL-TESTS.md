@@ -241,3 +241,16 @@ sessions started before the install don't have the hooks; restart one to test.
       in tmux is drawn once at the right width (no narrow, wrapped copy above it in the
       scrollback).
 
+## Feature Q: a mosh tab whose server is gone connects again
+
+- [ ] Build 1129: leave a mosh + tmux tab alone until its mosh-server is gone (restart the
+      host, or on the host `kill -9` the tab's mosh-server), then open the tab. It shows
+      "mosh: Last contact …" for about 20 seconds, then "Reconnecting: mosh …", then the same
+      tmux session.
+- [ ] Build 1129: in a tab opened with plain `mosh <host>`, switch to another tmux session,
+      wait a few seconds, kill its mosh-server as above. The tab comes back in the session it
+      was showing, not the one it started in.
+- [ ] Build 1129: turn on Airplane Mode with a mosh tab open for a minute. The banner counts
+      and nothing else happens; turning it off brings the same connection back (no
+      "Reconnecting").
+

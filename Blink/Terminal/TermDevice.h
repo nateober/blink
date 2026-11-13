@@ -85,6 +85,9 @@
 @property (nonatomic) BOOL isReady;
 @property (nonatomic) NSInteger rows;
 @property (nonatomic) NSInteger cols;
+/// Called on the device's read queue with every read of the session's output, before it is
+/// drawn. Nil when nobody is watching.
+@property (nonatomic, copy, nullable) void (^outputObserver)(const void * _Nonnull bytes, size_t length);
 
 // Offer the pointer as it is a struct on itself. This is helpful because on Swift,
 // we cannot used a synthesized expression to get the UnsafeMutablePointer.

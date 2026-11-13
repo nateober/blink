@@ -44,6 +44,21 @@ if ! zsh -c 'command -v blink-attach' >/dev/null 2>&1; then
   echo "PATH: added ~/.local/bin to ~/.zshenv"
 fi
 
+# A mosh-server whose client never comes back (the app was deleted, or the tab reconnected
+# with a new server) otherwise runs until the host restarts. Three days is longer than a
+# phone stays away with a tab it still means to use, and a tab that comes back later
+# reconnects into the same tmux session by itself (docs/bugs.md, 2026-11-13).
+if [ -z "$(zsh -c 'echo ${MOSH_SERVER_NETWORK_TMOUT-}' 2>/dev/null)" ]; then
+  {
+    echo ''
+    echo '# >>> mosh-server idle timeout >>>'
+    echo '# mosh-server exits after 3 days without hearing from its client.'
+    echo 'export MOSH_SERVER_NETWORK_TMOUT=259200'
+    echo '# <<< mosh-server idle timeout <<<'
+  } >> "$HOME/.zshenv"
+  echo "mosh: servers now exit after 3 days without a client (~/.zshenv)"
+fi
+
 python3 - "$home/config.json" "$key_id" "$team_id" "$p8" "$relay" <<'PY'
 import json, os, sys
 path, key_id, team_id, p8, relay = sys.argv[1:6]

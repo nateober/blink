@@ -68,6 +68,8 @@ public extension EncodedStateBacked {
   @objc var startupCmd: String? = nil
   @objc var serverPath: String? = nil
   @objc var experimentalRemoteIp: String? = nil
+  /// The host's ssh port, to check that the host answers before reconnecting.
+  @objc var sshPort: String? = nil
   
   // Snapshot storage (backing for the default behavior)
   @objc dynamic public var encodedStateStorage: Data? = nil
@@ -75,7 +77,7 @@ public extension EncodedStateBacked {
   override init() { super.init() }
   
   private enum Key: String, CodingKey {
-    case ip, port, key, predictionMode, predictOverwrite, startupCmd, serverPath, experimentalRemoteIp
+    case ip, port, key, predictionMode, predictOverwrite, startupCmd, serverPath, experimentalRemoteIp, sshPort
   }
   
   // Satisfy @objc protocol by forwarding to helpers:
@@ -92,6 +94,7 @@ public extension EncodedStateBacked {
     coder.bk_encode(startupCmd, for: Key.startupCmd)
     coder.bk_encode(serverPath, for: Key.serverPath)
     coder.bk_encode(experimentalRemoteIp, for: Key.experimentalRemoteIp)
+    coder.bk_encode(sshPort, for: Key.sshPort)
   }
   
   required init?(coder: NSCoder) {
@@ -105,6 +108,7 @@ public extension EncodedStateBacked {
     self.startupCmd = coder.bk_decode(for: Key.startupCmd)
     self.serverPath = coder.bk_decode(for: Key.serverPath)
     self.experimentalRemoteIp = coder.bk_decode(for: Key.experimentalRemoteIp)
+    self.sshPort = coder.bk_decode(for: Key.sshPort)
   }
   
   static var secureCoding2 = true
@@ -119,6 +123,7 @@ public extension EncodedStateBacked {
     self.startupCmd = params.startupCmd
     self.serverPath = params.serverPath
     self.experimentalRemoteIp = params.experimentalRemoteIp
+    self.sshPort = params.sshPort
   }
 }
 
@@ -134,7 +139,22 @@ public extension EncodedStateBacked {
   /// mid-session can run it again. Nil when no mosh is running.
   @objc var reconnectCommand: String? = nil
 
-  private enum Key: CodingKey { case childSessionType, childSessionParams, reconnectCommand }
+  /// The tmux session the tab was last showing (from its window title), so a reconnect
+  /// lands in it and not wherever the host's login goes.
+  @objc var reconnectSession: String? = nil
+
+  /// The command to run to bring the tab back: `reconnectCommand`, aimed at `reconnectSession`.
+  @objc var reconnectCommandForSession: String? {
+    guard let command = reconnectCommand, !command.isEmpty else { return nil }
+    return MoshReconnect.command(original: command, session: reconnectSession)
+  }
+
+  /// `last` is 0 when there has been none.
+  @objc static func allowsAutoReconnect(last: TimeInterval, now: TimeInterval) -> Bool {
+    MoshReconnect.allows(lastReconnect: last > 0 ? last : nil, now: now)
+  }
+
+  private enum Key: CodingKey { case childSessionType, childSessionParams, reconnectCommand, reconnectSession }
 
   override init() { super.init() }
 
@@ -145,6 +165,7 @@ public extension EncodedStateBacked {
     coder.bk_encode(childSessionType, for: Key.childSessionType)
     coder.bk_encode(childSessionParams, for: Key.childSessionParams)
     coder.bk_encode(reconnectCommand, for: Key.reconnectCommand)
+    coder.bk_encode(reconnectSession, for: Key.reconnectSession)
   }
 
   required init?(coder: NSCoder) {
@@ -153,6 +174,7 @@ public extension EncodedStateBacked {
     // NOTE: include all known MCP children subclasses here for secure decoding
     self.childSessionParams = coder.bk_decode(of: [MoshParams.self], for: Key.childSessionParams)
     self.reconnectCommand = coder.bk_decode(for: Key.reconnectCommand)
+    self.reconnectSession = coder.bk_decode(for: Key.reconnectSession)
   }
 
   // MARK: - BKSessionParamsSnapshotting (forward)

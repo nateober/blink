@@ -14,10 +14,17 @@
 #                                                 return, kill -9, relaunch
 #   tools/sim-mosh-restore.sh suspended <shot>    background 335 s, kill -9 while suspended,
 #                                                 relaunch
+#   tools/sim-mosh-restore.sh dead <shot> <pid>   kill -9 the tab's mosh-server (its pid: list
+#                                                 `pgrep -x mosh-server` before and after
+#                                                 connecting) and wait for the app to notice
+#                                                 and connect again (about 25 s; docs/bugs.md,
+#                                                 "mosh self-heal"). Run it at most once a
+#                                                 minute: closer reconnects are refused.
 #
 # Pass: the screenshot shows the tmux session again (not `blink>`, not "mosh: Last contact"
-# or "Nothing received"). For kill and resumed the "tmux clients" count goes up by one
-# (a new connection); for suspended it stays the same (the saved connection was picked up).
+# or "Nothing received"). For dead, "new mosh-server" names a pid. For kill and resumed the
+# "tmux clients" count goes up by one (a new connection); for suspended it stays the same
+# (the saved connection was picked up).
 # "sizes tmux saw" lists what a new connection attached at; it must not include 43 columns.
 #
 # Every relaunch that reconnects leaves the old mosh-server on the host. Afterwards kill the
@@ -44,7 +51,16 @@ case ${1:-} in
 kill)      kill -9 "$(pgrep -x Blink)"; nap 2; back ;;
 resumed)   away; back 8; kill -9 "$(pgrep -x Blink)"; nap 2; back ;;
 suspended) away; kill -9 "$(pgrep -x Blink)"; nap 2; back ;;
-*) sed -n 2,25p "$0"; exit 2 ;;
+dead)
+  before=$(pgrep -x mosh-server | sort)
+  kill -9 "${3:?the mosh-server pid}"
+  for _ in $(seq 60); do
+    new=$(pgrep -x mosh-server | sort | comm -13 <(echo "$before") -)
+    [ -n "$new" ] && break
+    nap 1
+  done
+  echo "new mosh-server: ${new:-none within 60 s}"; nap 6 ;;
+*) sed -n 2,31p "$0"; exit 2 ;;
 esac
 xcrun simctl io "$S" screenshot "$2.png" >/dev/null 2>&1
 echo "tmux clients after: $(clients)"
