@@ -24,11 +24,13 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-mkdir -p "$home/bin" "$home/state" "$bin"
+mkdir -p "$home/bin" "$home/state" "$home/requests" "$home/decisions" "$bin"
 chmod 700 "$home"
 install -m 755 "$here/blink_fleet.py" "$home/bin/blink_fleet.py"
 install -m 755 "$here/blink_notify.py" "$home/bin/blink_notify.py"
-for name in blink-agent-hook blink-attach blink-sessions blink-push blink-activity; do
+install -m 755 "$here/blink_diag.py" "$home/bin/blink_diag.py"
+ln -sf "$home/bin/blink_diag.py" "$bin/blink-diag"
+for name in blink-agent-hook blink-attach blink-sessions blink-push blink-activity blink-decide; do
   ln -sf "$home/bin/blink_fleet.py" "$bin/$name"
 done
 
@@ -86,11 +88,14 @@ except OSError:
     settings = {}
 hooks = settings.setdefault("hooks", {})
 changed = False
-for event in ("Notification", "Stop", "UserPromptSubmit", "SessionEnd"):
+# PermissionRequest holds the request open for an answer from the phone, so it gets the
+# long timeout; the prompt in the terminal stays usable while it waits.
+for event, timeout in (("Notification", 10), ("Stop", 10), ("UserPromptSubmit", 10),
+                       ("SessionEnd", 10), ("PermissionRequest", 600)):
     groups = hooks.setdefault(event, [])
     if any("blink-agent-hook" in h.get("command", "") for g in groups for h in g.get("hooks", [])):
         continue
-    groups.append({"hooks": [{"type": "command", "command": hook, "timeout": 10}]})
+    groups.append({"hooks": [{"type": "command", "command": hook, "timeout": timeout}]})
     changed = True
 if changed:
     if os.path.exists(path):

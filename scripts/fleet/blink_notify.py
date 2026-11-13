@@ -34,6 +34,20 @@ def build_payload(args):
         # force-quit app still won't wake.
         aps["content-available"] = 1
         aps["sound"] = "default"
+        # The category gives the notification its buttons. A permission request the phone
+        # can answer gets Approve and Deny (the app sends the id back with the answer); a
+        # session with Remote Control on gets Open in Claude.
+        request, url = getattr(args, "request", ""), getattr(args, "claude_url", "")
+        if request:
+            blink["request"] = request
+        if url:
+            blink["claude"] = url
+        if request and url:
+            aps["category"] = "AGENT_PERMISSION_REMOTE"
+        elif request:
+            aps["category"] = "AGENT_PERMISSION"
+        elif url:
+            aps["category"] = "AGENT_REMOTE"
     return {"aps": aps, "blink": blink}
 
 # ActivityKit decodes content-state with a plain JSONDecoder, which reads a Date as seconds
@@ -108,6 +122,9 @@ def main():
     ap.add_argument("--la-status", dest="la_status", default="running")
     ap.add_argument("--la-detail", dest="la_detail", default="")
     ap.add_argument("--quiet", action="store_true", help="deliver silently to Notification Center")
+    ap.add_argument("--request", default="", help="permission request id the push can answer")
+    ap.add_argument("--claude-url", dest="claude_url", default="",
+                    help="the session's Remote Control address, for an Open in Claude button")
     ap.add_argument("--collapse-id", dest="collapse_id", default="", help="replace an earlier push with the same id")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()

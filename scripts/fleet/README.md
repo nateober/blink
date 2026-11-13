@@ -49,3 +49,15 @@ Push *handling* is verified on the iOS Simulator with the same payload shape:
 echo '{"aps":{"alert":{"title":"Claude needs you","body":"approve edit?"},"sound":"default"},"blink":{"kind":"needs_input","host":"ada"}}' > /tmp/p.json
 xcrun simctl push booted com.obercode.blink /tmp/p.json
 ```
+
+## Answering a permission prompt from the push, and the app's own reports
+
+`install-agent-loop.sh` also installs:
+
+- a `PermissionRequest` hook (same `blink-agent-hook`, timeout 600): it leaves the request in
+  `~/.blink-notify/requests/` and waits for an answer while the prompt in the terminal stays
+  usable. The push for that prompt carries the request id; Approve and Deny in Blink run
+  `blink-decide ID allow|deny` on this host over SSH.
+- `blink-diag`: summarizes the MetricKit reports Blink uploads to `~/Scratch/blink-diag/`
+  (how iOS ended the app, crashes, hangs).
+

@@ -158,3 +158,106 @@ def test_activity_waits_before_starting_and_ending():
 def test_notify_does_not_run_inside_a_project():
     first = (pathlib.Path(bf.__file__).parent / "blink_notify.py").read_text().splitlines()[0]
     assert "--no-project" in first
+
+
+# ---- answering a permission prompt from the phone ----------------------------------
+
+def test_permission_summary_names_the_tool_and_what_it_touches():
+    assert bf.permission_summary(ev("PermissionRequest", tool_name="Bash",
+                                    tool_input={"command": "rm -rf\n  node_modules"})) == "Bash: rm -rf node_modules"
+    assert bf.permission_summary(ev("PermissionRequest", tool_name="Edit",
+                                    tool_input={"file_path": "/a/b.py", "old_string": "x"})) == "Edit: /a/b.py"
+    assert bf.permission_summary(ev("PermissionRequest", tool_name="Agent", tool_input={})) == "Agent"
+    long = bf.permission_summary(ev("PermissionRequest", tool_name="Bash", tool_input={"command": "x" * 400}))
+    assert len(long) == 160 and long.endswith("…")
+
+
+def test_decision_output_is_what_the_hook_contract_expects():
+    allow = bf.decision_output("allow")["hookSpecificOutput"]
+    assert allow["hookEventName"] == "PermissionRequest" and allow["decision"] == {"behavior": "allow"}
+    assert bf.decision_output("deny")["hookSpecificOutput"]["decision"]["behavior"] == "deny"
+
+
+def _home(tmp_path, monkeypatch):
+    for name, sub in (("HOME", ""), ("STATE", "state"), ("REQUESTS", "requests"), ("DECISIONS", "decisions")):
+        monkeypatch.setattr(bf, name, tmp_path / sub if sub else tmp_path)
+    monkeypatch.setattr(bf, "LOG", tmp_path / "hook.log")
+
+
+def test_a_decision_reaches_the_waiting_hook_once(tmp_path, monkeypatch, capsys):
+    _home(tmp_path, monkeypatch)
+    bf.write_request("work", {"id": "00112233aabbccdd", "summary": "Bash: ls", "at": 1})
+    assert bf.cmd_decide(["00112233aabbccdd", "allow"]) == 0
+    assert capsys.readouterr().out.strip() == "ok"
+    assert bf.wait_for_decision("work", "00112233aabbccdd", sleep=lambda s: None) == "allow"
+    assert bf.read_request("work") is None
+    # the same answer a second time finds nothing waiting
+    assert bf.cmd_decide(["00112233aabbccdd", "allow"]) == 3
+    assert capsys.readouterr().out.strip() == "expired"
+
+
+def test_the_wait_ends_when_the_request_is_cleared_or_replaced(tmp_path, monkeypatch):
+    _home(tmp_path, monkeypatch)
+    bf.write_request("work", {"id": "00112233aabbccdd", "summary": "", "at": 1})
+    bf.clear_request("work")  # what Stop or the next prompt does
+    assert bf.wait_for_decision("work", "00112233aabbccdd", sleep=lambda s: None) is None
+    bf.write_request("work", {"id": "ffffffffffffffff", "summary": "", "at": 2})
+    assert bf.wait_for_decision("work", "00112233aabbccdd", sleep=lambda s: None) is None
+    assert bf.read_request("work")["id"] == "ffffffffffffffff"  # the newer one is left alone
+
+
+def test_the_wait_gives_up_and_tidies(tmp_path, monkeypatch):
+    _home(tmp_path, monkeypatch)
+    bf.write_request("work", {"id": "00112233aabbccdd", "summary": "", "at": 1})
+    now = [0.0]
+    def tick(_):
+        now[0] += 100
+    assert bf.wait_for_decision("work", "00112233aabbccdd", sleep=tick, clock=lambda: now[0]) is None
+    assert bf.read_request("work") is None
+
+
+def test_decide_refuses_anything_but_a_request_id_and_a_verdict(tmp_path, monkeypatch):
+    _home(tmp_path, monkeypatch)
+    assert bf.cmd_decide(["../../etc/passwd", "allow"]) == 2
+    assert bf.cmd_decide(["00112233aabbccdd", "maybe"]) == 2
+    assert bf.cmd_decide(["00112233AABBCCDD", "allow"]) == 2
+    assert not (tmp_path / "decisions").exists()
+
+
+def test_a_push_carries_the_request_only_when_there_is_one():
+    assert bf.push_argv("alert", "ada", "work", "t", "b") == ["alert", "ada", "776f726b", "74", "62"]
+    assert bf.push_argv("alert", "ada", "work", "t", "b", "00112233aabbccdd")[-1] == "00112233aabbccdd"
+
+
+def test_a_push_carries_the_remote_control_address_when_the_session_has_one():
+    url = "https://claude.ai/code/session_01AbC-dEf_9"
+    argv = bf.push_argv("alert", "ada", "work", "t", "b", "", url)
+    assert argv[5] == "-" and bytes.fromhex(argv[6]).decode() == url
+    argv = bf.push_argv("alert", "ada", "work", "t", "b", "00112233aabbccdd", url)
+    assert argv[5] == "00112233aabbccdd" and len(argv) == 7
+
+
+def test_remote_address_is_the_last_one_the_transcript_announced():
+    lines = [
+        '{"type":"user","content":"see https://claude.ai/code/session_notthisone"}',
+        '{"type":"system","subtype":"bridge_status","content":"active at https://claude.ai/code/session_01old"}',
+        '{"type":"system","subtype":"bridge_status","content":"active \\u00b7 https://claude.ai/code/session_01New-x_2?foo=1"}',
+    ]
+    assert bf.remote_url(lines) == "https://claude.ai/code/session_01New-x_2"
+    assert bf.remote_url(lines[:1]) == ""
+    assert bf.remote_url(['{"subtype":"bridge_status","content":"https://evil.example/code/session_1"}']) == ""
+
+
+def test_push_refuses_an_address_that_is_not_a_claude_session(tmp_path, monkeypatch):
+    _home(tmp_path, monkeypatch)
+    bad = "https://evil.example/x".encode().hex()
+    assert bf.cmd_push(["alert", "ada", "776f726b", "74", "62", "-", bad]) == 2
+    assert bf.cmd_push(["alert", "ada", "776f726b", "74", "62", "-", "zz"]) == 2
+
+
+def test_only_a_permission_prompt_may_carry_a_request():
+    assert bf.asks_permission(ev("Notification", notification_type="permission_prompt"))
+    assert bf.asks_permission(ev("Notification", message="Claude needs your permission to use Bash"))
+    assert not bf.asks_permission(ev("Notification", notification_type="elicitation_dialog"))
+    assert not bf.asks_permission(ev("Notification", notification_type="idle_prompt"))
+    assert not bf.asks_permission(ev("Stop"))

@@ -11,16 +11,23 @@ Installed under several names (symlinks made by install-agent-loop.sh):
   blink-sessions     One line per tmux session, tab-separated:
                      name, windows, attached, activity epoch, state, host, pane title.
   blink-push ...     Send one push from this host's key (other hosts relay through it).
+  blink-decide ID allow|deny
+                     Answer the permission request a push carried. What the Approve and
+                     Deny buttons on that push run.
 
 State lives in ~/.blink-notify/:
   config.json   {"key_id","team_id","p8","topic"} on the host that holds the APNs key,
                 or {"relay": "<ssh host>"} on the others
   token         the phone's APNs device token (Blink publishes it)
   state/<hex>   "<state>\t<epoch>\t<message>" for each tmux session with an agent
+  requests/<hex>   the permission request a session is waiting on: {"id","summary","at"}
+  decisions/<id>   "allow" or "deny", written by blink-decide and read once by the hook
 """
 import fcntl
 import json
 import os
+import re
+import secrets
 import subprocess
 import sys
 import time
@@ -28,6 +35,12 @@ from pathlib import Path
 
 HOME = Path(os.environ.get("BLINK_NOTIFY_HOME", str(Path.home() / ".blink-notify")))
 STATE = HOME / "state"
+REQUESTS = HOME / "requests"
+DECISIONS = HOME / "decisions"
+# How long the hook holds a permission request open for an answer from the phone. The
+# prompt in the terminal works as usual the whole time; whichever answers first wins.
+DECISION_WAIT_SECS = 540
+DECISION_POLL_SECS = 0.4
 LOG = HOME / "hook.log"
 # Someone typing in the session this recently is looking at it; no push needed.
 WATCHING_SECS = 20
@@ -69,6 +82,18 @@ def state_for(event):
             if "waiting for your input" in message:
                 return DONE
     return None
+
+
+def asks_permission(event):
+    """True for the notification that reports a permission prompt. Only that one may carry a
+    request to answer: a question the agent asks is also "needs input", and an earlier
+    request answered in the terminal can still be on file then."""
+    if event.get("hook_event_name") != "Notification":
+        return False
+    kind = event.get("notification_type", "")
+    if kind:
+        return kind == "permission_prompt"
+    return "permission" in (event.get("message") or "").lower()
 
 
 def push_for(new, previous, watching):
@@ -121,6 +146,46 @@ def push_text(kind, session, task, message):
     if kind == "alert":
         return f"{session} needs you", (message or task or "Claude is waiting on you")[:180]
     return f"{session} finished", (task or message or "")[:180]
+
+
+def permission_summary(event):
+    """One line saying what the agent wants to do, for the push that asks."""
+    tool = str(event.get("tool_name") or "a tool")
+    args = event.get("tool_input") if isinstance(event.get("tool_input"), dict) else {}
+    detail = ""
+    for key in ("command", "file_path", "notebook_path", "url", "pattern", "query"):
+        if isinstance(args.get(key), str) and args[key].strip():
+            detail = " ".join(args[key].split())
+            break
+    text = f"{tool}: {detail}" if detail else tool
+    return text if len(text) <= 160 else text[:159] + "\u2026"
+
+
+REMOTE_URL = re.compile(r"https://claude\.ai/code/session_[A-Za-z0-9_-]{1,80}")
+
+
+def remote_url(lines):
+    """The Remote Control address of a Claude Code session, from its transcript's lines:
+    the last one the session announced, or "" when Remote Control is not on."""
+    found = ""
+    for line in lines:
+        if '"bridge_status"' not in line:
+            continue
+        match = REMOTE_URL.search(line)
+        if match:
+            found = match.group(0)
+    return found
+
+
+def is_request_id(text):
+    return len(text) == 16 and all(c in "0123456789abcdef" for c in text)
+
+
+def decision_output(decision):
+    """What a PermissionRequest hook prints to answer the prompt."""
+    answer = {"behavior": "allow"} if decision == "allow" else {
+        "behavior": "deny", "message": "Denied from the phone."}
+    return {"hookSpecificOutput": {"hookEventName": "PermissionRequest", "decision": answer}}
 
 
 def summarize(states, now):
@@ -186,6 +251,41 @@ def all_states():
     return out
 
 
+def read_request(session):
+    try:
+        data = json.loads((REQUESTS / hexname(session)).read_text())
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) and is_request_id(str(data.get("id", ""))) else None
+
+
+def write_request(session, request):
+    REQUESTS.mkdir(parents=True, exist_ok=True)
+    path = REQUESTS / hexname(session)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(request))
+    tmp.replace(path)
+
+
+def clear_request(session, only_id=None):
+    current = read_request(session)
+    if current is None or (only_id and current["id"] != only_id):
+        return
+    (REQUESTS / hexname(session)).unlink(missing_ok=True)
+    (DECISIONS / current["id"]).unlink(missing_ok=True)
+
+
+def take_decision(request_id):
+    """The answer blink-decide left for this request, once."""
+    path = DECISIONS / request_id
+    try:
+        text = path.read_text().strip()
+    except OSError:
+        return None
+    path.unlink(missing_ok=True)
+    return text if text in ("allow", "deny") else None
+
+
 def someone_watching(session):
     now = time.time()
     for line in tmux("list-clients", "-t", f"={session}", "-F", "#{client_activity}").splitlines():
@@ -226,14 +326,29 @@ def detach(argv):
         log(f"could not start {argv[0]}: {e}")
 
 
-def push_argv(kind, host, session, title, body):
+def push_argv(kind, host, session, title, body, request="", url=""):
     """argv for `blink-push`, every free-text field hex-encoded so it survives ssh."""
-    return [kind, host, hexname(session), title.encode().hex(), body.encode().hex()]
+    argv = [kind, host, hexname(session), title.encode().hex(), body.encode().hex()]
+    if request or url:
+        argv.append(request or "-")
+    if url:
+        argv.append(url.encode().hex())
+    return argv
 
 
-def send_push(kind, host, session, title, body):
+def transcript_remote_url(path):
+    if not path:
+        return ""
+    try:
+        with open(path, errors="replace") as f:
+            return remote_url(f)
+    except OSError:
+        return ""
+
+
+def send_push(kind, host, session, title, body, request="", url=""):
     cfg = config()
-    args = push_argv(kind, host, session, title, body)
+    args = push_argv(kind, host, session, title, body, request, url)
     here = str(Path(__file__).resolve())
     if cfg.get("p8"):
         detach([sys.executable, here, "push", *args])
@@ -247,6 +362,36 @@ def send_push(kind, host, session, title, body):
 
 # ---- commands ----------------------------------------------------------------------
 
+def wait_for_decision(session, request_id, sleep=time.sleep, clock=time.time):
+    """Holds a permission request open until the phone answers it, something else in the
+    session replaces or clears it, or the wait runs out. Returns "allow", "deny" or None."""
+    deadline = clock() + DECISION_WAIT_SECS
+    while clock() < deadline:
+        current = read_request(session)
+        if current is None or current["id"] != request_id:
+            return None  # answered in the terminal, or a newer request took its place
+        decision = take_decision(request_id)
+        if decision:
+            clear_request(session, request_id)
+            return decision
+        sleep(DECISION_POLL_SECS)
+    clear_request(session, request_id)
+    return None
+
+
+def cmd_permission(event, session):
+    """A permission prompt just opened. Leave a request the push can name, then wait for
+    the phone's answer; printing nothing leaves the prompt to the terminal."""
+    request_id = secrets.token_hex(8)
+    write_request(session, {"id": request_id, "summary": permission_summary(event),
+                            "at": int(time.time())})
+    decision = wait_for_decision(session, request_id)
+    if decision:
+        log(f"PermissionRequest {session}: {decision} from the phone")
+        print(json.dumps(decision_output(decision)))
+    return 0
+
+
 def cmd_hook():
     try:
         event = json.load(sys.stdin)
@@ -255,21 +400,32 @@ def cmd_hook():
     pane = os.environ.get("TMUX_PANE")
     if not pane or not os.environ.get("TMUX"):
         return 0  # not in tmux: nothing to name, nothing to return to
+    is_permission = event.get("hook_event_name") == "PermissionRequest"
     new = state_for(event)
-    if new is None:
+    if new is None and not is_permission:
         return 0
     info = tmux("display-message", "-p", "-t", pane, "#{session_name}\t#{pane_title}")
     session, _, title = info.partition("\t")
     if not session:
         return 0
+    if is_permission:
+        return cmd_permission(event, session)
     previous, _, _ = read_state(session)
     message = event.get("message") or ""
     write_state(session, new, message)
+    request = read_request(session) if asks_permission(event) else None
+    if new != NEEDS_INPUT:
+        clear_request(session)  # the turn moved on; an open request is answered or moot
     kind = push_for(new, previous, someone_watching(session)) if new else None
     host = tmux("display-message", "-p", "#{host_short}") or os.uname().nodename.split(".")[0]
     if kind:
         title_text, body = push_text(kind, session, task_from_title(title), message)
-        send_push(kind, host, session, title_text, body)
+        if request and kind == "alert":
+            body = request.get("summary") or body
+        alert = kind == "alert"
+        send_push(kind, host, session, title_text, body,
+                  request["id"] if request and alert else "",
+                  transcript_remote_url(event.get("transcript_path")) if alert else "")
     log(f"{event.get('hook_event_name')} {session}: {previous or '-'} -> {new or 'ended'}"
         + (f" push={kind}" if kind else ""))
     if new != previous:
@@ -321,11 +477,46 @@ def read_token(name):
     return token if token and all(c in "0123456789abcdefABCDEF" for c in token) else ""
 
 
-def cmd_push(argv):
-    if len(argv) != 5 or argv[0] not in ("alert", "quiet"):
-        print("usage: blink-push alert|quiet HOST SESSIONHEX TITLEHEX BODYHEX", file=sys.stderr)
+def cmd_decide(argv):
+    if len(argv) != 2 or not is_request_id(argv[0]) or argv[1] not in ("allow", "deny"):
+        print("usage: blink-decide REQUESTID allow|deny", file=sys.stderr)
         return 2
-    kind, host, session_hex, title_hex, body_hex = argv
+    request_id, decision = argv
+    waiting = False
+    if REQUESTS.is_dir():
+        for path in REQUESTS.iterdir():
+            name = unhex(path.name)
+            current = read_request(name) if name else None
+            if current and current["id"] == request_id:
+                waiting = True
+    if not waiting:
+        print("expired")  # answered already, or the agent moved on
+        return 3
+    DECISIONS.mkdir(parents=True, exist_ok=True)
+    tmp = DECISIONS / (request_id + ".tmp")
+    tmp.write_text(decision)
+    tmp.replace(DECISIONS / request_id)
+    print("ok")
+    return 0
+
+
+def cmd_push(argv):
+    if len(argv) not in (5, 6, 7) or argv[0] not in ("alert", "quiet"):
+        print("usage: blink-push alert|quiet HOST SESSIONHEX TITLEHEX BODYHEX [REQUESTID|-] [URLHEX]",
+              file=sys.stderr)
+        return 2
+    kind, host, session_hex, title_hex, body_hex = argv[:5]
+    request = argv[5] if len(argv) >= 6 and argv[5] != "-" else ""
+    if request and not is_request_id(request):
+        return 2
+    url = ""
+    if len(argv) == 7:
+        try:
+            url = bytes.fromhex(argv[6]).decode()
+        except ValueError:
+            return 2
+        if not REMOTE_URL.fullmatch(url):
+            return 2
     session = unhex(session_hex)
     try:
         title, body = bytes.fromhex(title_hex).decode(), bytes.fromhex(body_hex).decode()
@@ -342,6 +533,10 @@ def cmd_push(argv):
              "--collapse-id", f"{host}.{session_hex}"[:64]]
     if kind == "quiet":
         extra.append("--quiet")
+    if request:
+        extra += ["--request", request]
+    if url:
+        extra += ["--claude-url", url]
     return run_notify(notify_argv(cfg, token, extra))
 
 
@@ -442,6 +637,8 @@ def main():
         return cmd_sessions()
     if name == "blink-push":
         return cmd_push(argv)
+    if name == "blink-decide":
+        return cmd_decide(argv)
     if name == "blink-activity":
         return cmd_activity()
     print(__doc__, file=sys.stderr)
