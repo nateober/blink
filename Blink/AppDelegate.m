@@ -130,6 +130,10 @@ void __setupProcessEnv(void) {
   [[PushRegistrar shared] requestAndRegister];
   // fleet-native: let a fleet host start and update the lock-screen activity by push.
   [FleetActivityBridge startObserving];
+  // fleet-native: Approve and Deny buttons on a push that carries a permission request.
+  [AgentReply registerCategory];
+  // fleet-native: keep iOS's reports about this app (exits, crashes) and hand them to a host.
+  [[FleetDiagnostics shared] start];
 
 //  [nc addObserver:self selector:@selector(_logEvent:) name:nil object:nil];
 //  [nc addObserver:self selector:@selector(_active) name:@"UIApplicationSystemNavigationActionChangedNotification" object:nil];
@@ -394,6 +398,12 @@ configurationForConnectingSceneSession:(UISceneSession *)connectingSceneSession
   // fleet-native: tapping clears the banner, so persist the text first (see `notiflog`).
   UNNotificationContent *content = response.notification.request.content;
   [[NotificationInbox shared] recordWithTitle:content.title body:content.body userInfo:content.userInfo];
+
+  // fleet-native: Approve or Deny on a permission push answers the agent from here; the app
+  // stays in the background.
+  if ([AgentReply handleAction:response.actionIdentifier userInfo:content.userInfo completion:completionHandler]) {
+    return;
+  }
 
   SceneDelegate *sceneDelegate = (SceneDelegate *)response.targetScene.delegate;
 

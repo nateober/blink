@@ -13,6 +13,7 @@
 
 import Foundation
 import UIKit
+import UserNotifications
 import BlinkConfig
 
 enum FleetHosts {
@@ -77,6 +78,92 @@ enum AgentTabTitles {
       session: blink["session"] as? String,
       frontTitle: front,
       appActive: UIApplication.shared.applicationState == .active)
+  }
+}
+
+/// Answering an agent's permission prompt from its push (FleetCore/PermissionReply).
+@objc final class AgentReply: NSObject {
+  /// Gives pushes that carry a permission request their Approve and Deny buttons. Both ask
+  /// for the phone to be unlocked first, and neither brings the app to the front.
+  @objc static func registerCategory() {
+    let approve = UNNotificationAction(
+      identifier: PermissionReply.approveAction, title: "Approve", options: [.authenticationRequired])
+    let deny = UNNotificationAction(
+      identifier: PermissionReply.denyAction, title: "Deny", options: [.authenticationRequired, .destructive])
+    // Opening another app needs this one in front for a moment.
+    let open = UNNotificationAction(
+      identifier: PermissionReply.openAction, title: "Open in Claude", options: [.foreground])
+    let ours = [
+      PermissionReply.category: [approve, deny],
+      PermissionReply.remoteCategory: [approve, deny, open],
+      PermissionReply.openOnlyCategory: [open],
+    ]
+    let center = UNUserNotificationCenter.current()
+    center.getNotificationCategories { existing in
+      var all = existing.filter { ours[$0.identifier] == nil }
+      for (identifier, actions) in ours {
+        all.insert(UNNotificationCategory(
+          identifier: identifier, actions: actions, intentIdentifiers: [], options: []))
+      }
+      center.setNotificationCategories(all)
+    }
+  }
+
+  /// Runs the answer on the host the push named, or opens the session in the Claude app.
+  /// False when the response is not one of our buttons (a plain tap), and `completion` is
+  /// then the caller's to call.
+  @objc(handleAction:userInfo:completion:)
+  static func handle(action: String, userInfo: [AnyHashable: Any], completion: @escaping () -> Void) -> Bool {
+    guard let blink = userInfo["blink"] as? [String: Any] else { return false }
+    if let address = PermissionReply.remoteURL(action: action, address: blink["claude"] as? String),
+       let url = URL(string: address) {
+      // Open in Claude: the session's page in the Claude app (Remote Control).
+      DispatchQueue.main.async {
+        UIApplication.shared.open(url, options: [:]) { _ in completion() }
+      }
+      return true
+    }
+    guard let host = blink["host"] as? String,
+          let command = PermissionReply.command(action: action, request: blink["request"] as? String)
+    else { return false }
+    let session = (blink["session"] as? String) ?? host
+    let request = (blink["request"] as? String) ?? ""
+
+    var task = UIBackgroundTaskIdentifier.invalid
+    let end = {
+      if task != .invalid {
+        UIApplication.shared.endBackgroundTask(task)
+        task = .invalid
+      }
+    }
+    task = UIApplication.shared.beginBackgroundTask(withName: "agent-reply") { end() }
+
+    Task {
+      var outcome = PermissionReply.Outcome.failed("no host entry reaches \(host)")
+      if let alias = FleetHosts.alias(for: host) {
+        do {
+          let result = try await HeadlessSSHRunner.run(alias: alias, command: command, overallTimeout: 20)
+          outcome = PermissionReply.outcome(stdout: result.stdout, exitCode: result.exitCode, stderr: result.stderr)
+        } catch {
+          outcome = .failed((error as? LocalizedError)?.errorDescription ?? "\(error)")
+        }
+      }
+      if let notice = PermissionReply.failureNotice(session: session, action: action, outcome: outcome) {
+        // Say so, and make the notice a way back to the session.
+        let content = UNMutableNotificationContent()
+        content.title = notice.title
+        content.body = notice.body
+        content.sound = .default
+        content.userInfo = ["blink": ["kind": "needs_input", "host": host, "session": session]]
+        try? await UNUserNotificationCenter.current().add(
+          UNNotificationRequest(identifier: "agent-reply-\(request)", content: content, trigger: nil))
+      }
+      await MainActor.run {
+        completion()
+        end()
+      }
+    }
+    return true
   }
 }
 

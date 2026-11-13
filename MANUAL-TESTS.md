@@ -254,3 +254,43 @@ sessions started before the install don't have the hooks; restart one to test.
       and nothing else happens; turning it off brings the same connection back (no
       "Reconnecting").
 
+## Feature R: answer a permission prompt from the push
+
+Needs build 1130 and the host scripts from 1130 (`install-agent-loop.sh`; done on Ada and
+Jarvis). Use a session that asks before running things (`claude --permission-mode default`,
+or Shift-Tab out of auto mode).
+
+- [ ] Leave the session, let the agent ask to run something. The push body names the tool and
+      what it touches ("Bash: npm test"). Long-press it: Approve, Deny, and Open in Claude
+      when the session has Remote Control on.
+- [ ] Approve with the phone locked: it asks for Face ID, the app does not come to the front,
+      and the agent carries on within a few seconds.
+- [ ] Deny: the agent reports the tool was denied from the phone.
+- [ ] Answer a prompt at the keyboard, then tap Approve on its old push: a notification says
+      "already answered".
+- [ ] With the host unreachable (Airplane Mode, then back on Wi-Fi without Tailscale), tap
+      Approve: a notification says it did not go through and a tap opens the session.
+- [ ] Open in Claude: goes to that session in the Claude app. (In the simulator it opens
+      claude.ai in Safari; whether the phone hands it to the Claude app is unchecked.)
+- [ ] A plain tap on the push still goes to the tmux session.
+
+## Feature S: the app's own crash and exit reports reach Ada
+
+- [ ] Build 1130: a day after installing, `blink-diag` on Ada lists at least one metrics
+      report (iOS hands them over about once a day; the app sends them the next time it is in
+      front and Ada is reachable). After the app is killed or crashes, the next report says
+      how it ended (for example "ended in background: MemoryPressure 3").
+- [ ] Open Sessions once after installing if `blink-diag` stays empty: reports only go to
+      hosts that answered the session switcher.
+
+## Feature T: fullscreen Claude Code and tmux 3.8 on the hosts
+
+- [ ] New Claude Code sessions on Ada and Jarvis start in the fullscreen renderer. In a mosh +
+      tmux tab, a swipe scrolls the conversation and "Jump to bottom" returns. If scrolling or
+      selecting text is worse than before, `/tui default` in that session turns it off (and
+      remove `"tui": "fullscreen"` from `~/.claude/settings.json` to make that stick).
+- [ ] After Ada's tmux server has been restarted (it still runs 3.6a until then:
+      `tmux kill-server` ends every session, so pick the moment), `tmux display -p '#{version}'`
+      says 3.8 and redraws while Claude streams flicker less than before.
+- [ ] New sessions show up in the Claude app's Code tab (Remote Control at startup).
+

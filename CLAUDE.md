@@ -27,6 +27,12 @@ App Store** (GPL code he doesn't own + App-Store-terms conflict + "Blink" tradem
   out) notices within about 25 s and connects again into the tmux session it was showing
   (`MoshWatch`, `FleetCore/MoshRules.swift`); hosts end mosh-servers after 3 days without a
   client (`MOSH_SERVER_NETWORK_TMOUT` in `~/.zshenv`). Check: `tools/sim-mosh-restore.sh dead`.
+- **Build 1130** (2026-11-13): Approve, Deny and Open in Claude on the push for a permission
+  prompt (`PermissionRequest` hook, `blink-decide`); the app sends iOS's reports about itself
+  (exits, crashes) to `~/Scratch/blink-diag/`, read with `blink-diag`; upstream's
+  synchronized-output patch. Hosts: Claude Code fullscreen renderer and Remote Control at
+  startup on Ada and Jarvis, tmux 3.8 installed (Ada's running server is 3.6a until restarted).
+  Research and sources: `docs/research/2026-11-13-phone-experience.md`.
 - **Build 1125** fixed frozen rows and stale frames after an app switch. Bugs Nate reports go in
   `docs/bugs.md`.
 - `raw` is the baseline and holds everything shipped. `feat/tmux-key-config` (iPad tmux key +
@@ -35,6 +41,9 @@ App Store** (GPL code he doesn't own + App-Store-terms conflict + "Blink" tradem
   from branch `voice-key-upstream`. Changes the maintainer asks for go on that branch, not `raw`.
 
 ## Open items — these need NATE (surface them at the start of a fresh session)
+0. **Restart Ada's tmux server** when no session matters (`tmux kill-server` ends them all):
+   until then it runs 3.6a and the flicker fix from 3.8 is not in effect. And build 1130 on the
+   phone: MANUAL-TESTS Features R, S, T.
 0. **Builds 1127 to 1129 on the phone**: does coming back still give a blank or dead tab, does
    the app still get killed (if so, the phone's crash or jetsam log comes first, `docs/bugs.md`),
    does a killed mosh tab reconnect (MANUAL-TESTS Feature P), and does a tab left for days or
@@ -49,8 +58,9 @@ App Store** (GPL code he doesn't own + App-Store-terms conflict + "Blink" tradem
 ## Working here
 ```bash
 git checkout raw                              # baseline; branch new work off it
-swift test --package-path tools/FleetCore     # 125 tests = pure-logic verification path
+swift test --package-path tools/FleetCore     # 135 tests = pure-logic verification path
 uv run --with pytest pytest scripts/fleet -q   # host-side scripts (hook, push, session list)
+for t in tools/termjs-tests/*.test.js; do node "$t"; done   # terminal page
 # build for sim: xcodebuild ... -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' ENABLE_DEBUG_DYLIB=NO
 #   (keep code signing ON: CODE_SIGNING_ALLOWED=NO drops the app-group entitlement → crash in Migrator at launch)
 # ship a TestFlight build: scripts/release.sh  (detached, ~15 min; auto-bumps build #)

@@ -41,3 +41,25 @@ def test_live_activity_update_payload():
     assert aps["event"] == "update"
     assert aps["content-state"]["status"] == "needs input"
     assert aps["content-state"]["detail"] == "on ada"
+
+
+def test_a_permission_request_gets_buttons():
+    r = run(["--token", "ab12", "--title", "t", "--body", "Bash: ls", "--host", "ada",
+             "--session", "work", "--request", "00112233aabbccdd", "--dry-run"])
+    assert r.returncode == 0, r.stderr
+    payload = json.loads(r.stdout)
+    assert payload["aps"]["category"] == "AGENT_PERMISSION"
+    assert payload["blink"]["request"] == "00112233aabbccdd"
+
+
+def test_buttons_follow_what_the_push_carries():
+    url = "https://claude.ai/code/session_01abc"
+    base = ["--token", "ab12", "--title", "t", "--host", "ada", "--session", "work", "--dry-run"]
+    both = json.loads(run(base + ["--request", "00112233aabbccdd", "--claude-url", url]).stdout)
+    assert both["aps"]["category"] == "AGENT_PERMISSION_REMOTE" and both["blink"]["claude"] == url
+    only_url = json.loads(run(base + ["--claude-url", url]).stdout)
+    assert only_url["aps"]["category"] == "AGENT_REMOTE" and "request" not in only_url["blink"]
+    plain = json.loads(run(base).stdout)
+    assert "category" not in plain["aps"] and plain["aps"]["sound"] == "default"
+    quiet = json.loads(run(base + ["--quiet", "--claude-url", url]).stdout)
+    assert "category" not in quiet["aps"]

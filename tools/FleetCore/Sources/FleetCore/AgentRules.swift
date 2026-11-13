@@ -217,6 +217,27 @@ public enum PasteUpload {
   /// The commands that write the image on the host, in order. The last one prints the
   /// file's full path. `fileName` must come from `fileName(at:)`.
   public static func commands(base64: String, fileName: String) -> [String] {
+    HostUpload.commands(directory: directory, keepDays: keepDays, chunkSize: chunkSize,
+                        base64: base64, fileName: fileName)
+  }
+
+  /// What gets typed once the upload is done: the path the host printed and a space, or nil
+  /// when the answer isn't the path we asked for.
+  public static func typedText(stdout: String, fileName: String) -> String? {
+    let path = stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard path.hasPrefix("/"), path.hasSuffix("/\(directory)/\(fileName)"),
+          path.rangeOfCharacter(from: .controlCharacters) == nil,
+          !path.contains(" "), !path.contains("'"), !path.contains("\"")
+    else { return nil }
+    return path + " "
+  }
+}
+
+/// Writing a file on a host with nothing but command lines: the base64 goes over in pieces
+/// a remote shell accepts, and the last command decodes it and prints the file's full path.
+enum HostUpload {
+  static func commands(directory: String, keepDays: Int, chunkSize: Int,
+                       base64: String, fileName: String) -> [String] {
     let dir = "\"$HOME/\(directory)\""
     let part = "\(dir)/\(fileName).b64"
     let begin = "mkdir -p \(dir) && find \(dir) -type f -mtime +\(keepDays) -delete; : > \(part)"
@@ -234,15 +255,128 @@ public enum PasteUpload {
     out[out.count - 1] += " && " + finish
     return out
   }
+}
 
-  /// What gets typed once the upload is done: the path the host printed and a space, or nil
-  /// when the answer isn't the path we asked for.
-  public static func typedText(stdout: String, fileName: String) -> String? {
-    let path = stdout.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard path.hasPrefix("/"), path.hasSuffix("/\(directory)/\(fileName)"),
-          path.rangeOfCharacter(from: .controlCharacters) == nil,
-          !path.contains(" "), !path.contains("'"), !path.contains("\"")
-    else { return nil }
-    return path + " "
+/// The reports iOS hands the app about itself (MetricKit): why it was ended, crashes, hangs.
+/// They are kept on the phone until a host takes them, in `~/Scratch/blink-diag/`, where
+/// `blink-diag` reads them.
+public enum DiagUpload {
+  public static let directory = "Scratch/blink-diag"
+  public static let keepDays = 60
+  /// Reports kept on the phone while no host has taken them.
+  public static let keepLocal = 40
+
+  public enum Kind: String, CaseIterable {
+    case metrics, diagnostics
+  }
+
+  public static func fileName(kind: Kind, at date: Date, serial: Int = 0) -> String {
+    let f = DateFormatter()
+    f.locale = Locale(identifier: "en_US_POSIX")
+    f.timeZone = TimeZone(identifier: "UTC")
+    f.dateFormat = "yyyyMMdd-HHmmss"
+    return "blink-\(f.string(from: date))-\(serial)-\(kind.rawValue).json"
+  }
+
+  /// True for a name `fileName` made. Anything else is not put on a command line.
+  public static func isReportName(_ name: String) -> Bool {
+    guard name.hasPrefix("blink-"), name.hasSuffix(".json"), name.count < 80 else { return false }
+    let allowed = Set("abcdefghijklmnopqrstuvwxyz0123456789-.")
+    guard name.allSatisfy({ allowed.contains($0) }), !name.contains("..") else { return false }
+    return Kind.allCases.contains { name.hasSuffix("-\($0.rawValue).json") }
+  }
+
+  /// The commands that write one report on the host, or none for a name that isn't ours.
+  public static func commands(base64: String, fileName: String) -> [String] {
+    guard isReportName(fileName) else { return [] }
+    return HostUpload.commands(directory: directory, keepDays: keepDays,
+                               chunkSize: PasteUpload.chunkSize, base64: base64, fileName: fileName)
+  }
+
+  /// True when the host confirmed the file (the last command prints its path).
+  public static func confirmed(stdout: String, fileName: String) -> Bool {
+    stdout.trimmingCharacters(in: .whitespacesAndNewlines).hasSuffix("/\(directory)/\(fileName)")
+  }
+
+  /// The local reports to delete so no more than `keepLocal` stay, oldest first. Names sort
+  /// by time.
+  public static func overflow(_ names: [String]) -> [String] {
+    let ours = names.filter(isReportName).sorted()
+    return Array(ours.prefix(max(0, ours.count - keepLocal)))
+  }
+}
+
+/// Answering an agent's permission prompt from the push that reports it. The push names the
+/// request; Approve and Deny run `blink-decide` on the host, and the prompt in the terminal
+/// stays usable the whole time.
+public enum PermissionReply {
+  public static let category = "AGENT_PERMISSION"
+  /// The same, for a session that also has Remote Control on.
+  public static let remoteCategory = "AGENT_PERMISSION_REMOTE"
+  /// A session that needs input and has Remote Control on, with nothing to approve.
+  public static let openOnlyCategory = "AGENT_REMOTE"
+  public static let approveAction = "AGENT_APPROVE"
+  public static let denyAction = "AGENT_DENY"
+  public static let openAction = "AGENT_OPEN_CLAUDE"
+
+  /// The session's page in the Claude app for the Open in Claude button, or nil when the
+  /// button or the address isn't ours. Only a Claude Code session address is ever opened.
+  public static func remoteURL(action: String, address: String?) -> String? {
+    guard action == openAction, let address else { return nil }
+    let prefix = "https://claude.ai/code/session_"
+    guard address.hasPrefix(prefix) else { return nil }
+    let id = address.dropFirst(prefix.count)
+    guard (1...80).contains(id.utf8.count),
+          id.utf8.allSatisfy({ c in
+            (c >= 48 && c <= 57) || (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c == 45 || c == 95
+          }) else { return nil }
+    return address
+  }
+
+  public enum Outcome: Equatable {
+    case sent
+    /// Answered already, or the agent moved on.
+    case expired
+    case failed(String)
+  }
+
+  public static func isRequestID(_ text: String) -> Bool {
+    text.utf8.count == 16 && text.utf8.allSatisfy { ($0 >= 48 && $0 <= 57) || ($0 >= 97 && $0 <= 102) }
+  }
+
+  /// "allow" or "deny" for one of our two buttons, nil for anything else (a plain tap).
+  public static func verdict(action: String) -> String? {
+    switch action {
+    case approveAction: return "allow"
+    case denyAction: return "deny"
+    default: return nil
+    }
+  }
+
+  /// The command to run on the host, or nil when the button or the request id isn't ours.
+  public static func command(action: String, request: String?) -> String? {
+    guard let verdict = verdict(action: action), let request, isRequestID(request) else { return nil }
+    return "PATH=\"$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH\" blink-decide \(request) \(verdict)"
+  }
+
+  public static func outcome(stdout: String, exitCode: Int32?, stderr: String) -> Outcome {
+    let said = stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+    if exitCode == 0, said == "ok" { return .sent }
+    if said == "expired" { return .expired }
+    let why = stderr.trimmingCharacters(in: .whitespacesAndNewlines)
+    if why.contains("command not found") || exitCode == 127 {
+      return .failed("the host has no blink-decide; run install-agent-loop.sh there")
+    }
+    return .failed(why.isEmpty ? "the host did not confirm" : String(why.prefix(120)))
+  }
+
+  /// What to tell the user when the answer did not land; nil when it did.
+  public static func failureNotice(session: String, action: String, outcome: Outcome) -> (title: String, body: String)? {
+    let what = verdict(action: action) == "allow" ? "Approve" : "Deny"
+    switch outcome {
+    case .sent: return nil
+    case .expired: return ("\(session): already answered", "\(what) was not needed. Tap to open the session.")
+    case .failed(let why): return ("\(session): \(what) did not go through", "\(why). Tap to open the session.")
+    }
   }
 }
