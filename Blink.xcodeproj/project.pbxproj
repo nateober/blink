@@ -104,6 +104,7 @@
 		A3EF4ACA802B1F62E5979674 /* PushModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E9C41B486B94B1C5178AA29 /* PushModels.swift */; };
 		ADDE4B2483211C267F281F81 /* NotificationLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CEB4798B1DCA7E955CE7C2F /* NotificationLog.swift */; };
 		B362FEC17961A90005902575 /* FleetActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B6F484497B202D9902C7DD8 /* FleetActivityAttributes.swift */; };
+		B67040E889C5FBE59BD6D7FD /* FleetDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCE34791B97310B16919F942 /* FleetDiagnostics.swift */; };
 		B700AED81DD0F2C200100EBF /* CloudKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B700AED71DD0F2C200100EBF /* CloudKit.framework */; };
 		B75112CD1DE4A7B10040C693 /* BKiCloudConfigurationViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = B75112CC1DE4A7B10040C693 /* BKiCloudConfigurationViewController.m */; };
 		B752EE2B1DFEF19D00E305C8 /* BKUserConfigurationManager.m in Sources */ = {isa = PBXBuildFile; fileRef = B752EE2A1DFEF19D00E305C8 /* BKUserConfigurationManager.m */; };
@@ -1313,6 +1314,7 @@
 		EA0BA18B1C0CC57B00719C1A /* Blink.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Blink.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F76B4F08B623504BEA8828DD /* MoshRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MoshRules.swift; path = tools/FleetCore/Sources/FleetCore/MoshRules.swift; sourceTree = SOURCE_ROOT; };
 		F95246907E8E7FC7C92C36D9 /* BlinkWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlinkWidgetsBundle.swift; sourceTree = "<group>"; };
+		FCE34791B97310B16919F942 /* FleetDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FleetDiagnostics.swift; path = Blink/Fleet/FleetDiagnostics.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -3842,6 +3844,7 @@
 				CA2143D8B75A52A6F815F742 /* SessionSwitcher.swift in Sources */,
 				2445494585F67104DC9D1D66 /* AgentsSettingsView.swift in Sources */,
 				7AD543838A7202532BD3DCD3 /* MoshRules.swift in Sources */,
+				B67040E889C5FBE59BD6D7FD /* FleetDiagnostics.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
