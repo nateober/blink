@@ -43,6 +43,9 @@ protocol SuspendableSession: class {
   init(meta: SessionMeta?)
   func resume(with unarchiver: NSKeyedUnarchiver)
   func suspendSession(with archiver: NSKeyedArchiver)
+  /// Archives the session as it is while running, without stopping it. Returns false when
+  /// there is nothing to save.
+  func archiveRunningSession(with archiver: NSKeyedArchiver) -> Bool
 }
 
 @objc class SessionRegistry: NSObject {
@@ -157,6 +160,23 @@ protocol SuspendableSession: class {
 
     _resume(forKey: session.meta.key)
     session.meta.isSuspended = false
+    // The file just read holds a connection snapshot that is used up now. Left on disk, a
+    // relaunch after the app is killed would restore from it and get a dead mosh.
+    saveRunning(session: session)
+  }
+
+  /// Replaces a running session's file with its current state (no connection snapshot).
+  func saveRunning(session: SuspendableSession) {
+    guard !session.meta.isSuspended,
+          UIApplication.shared.isProtectedDataAvailable
+    else {
+      return
+    }
+    let archiver = NSKeyedArchiver(requiringSecureCoding: true)
+    guard session.archiveRunningSession(with: archiver) else {
+      return
+    }
+    _fsWrite(archiver.encodedData, forKey: session.meta.key)
   }
   
   

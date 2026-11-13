@@ -52,6 +52,9 @@
 - (void)enqueueCommand:(NSString *)cmd skipHistoryRecord: (BOOL) skipHistoryRecord;
 - (bool)isRunningCmd;
 
+/// Saves what a relaunch needs to bring this session back (called off the main thread).
+- (void)restorableStateChanged;
+
 - (void)updateAllowedPaths;
 - (void)setActiveSession;
 
