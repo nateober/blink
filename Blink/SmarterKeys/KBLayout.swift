@@ -153,6 +153,8 @@ extension KBLayout {
      .wideKey(.esc,  traits: .default),
      .wideKey(.ctrl, traits: .default),
      .key(    .alt,  traits: .default),
+     .icon(.tmuxMenu, traits: .default),
+     .icon(.mic, traits: .default),
 
      .icon(.esc,   traits: .defaultSuggestionsOnly),
      .icon(.ctrl,  traits: .defaultSuggestionsOnly),
@@ -238,6 +240,8 @@ extension KBLayout {
       .wideKey(.esc,  traits: .default),
       .wideKey(.ctrl, traits: .default),
       .key(    .alt,  traits: .default),
+      .icon(.tmuxMenu, traits: .default),
+      .icon(.mic, traits: .default),
 
       .icon(.esc,   traits: .defaultSuggestionsOnly),
       .icon(.ctrl,  traits: .defaultSuggestionsOnly),
@@ -322,6 +326,8 @@ extension KBLayout {
       .wideKey(.esc,  traits: .default),
       .wideKey(.ctrl, traits: .default),
       .wideKey(.alt,  traits: .default),
+      .icon(.tmuxMenu, traits: .default),
+      .icon(.mic, traits: .default),
 
       .key(   .esc,  traits: .defaultSuggestionsOnly),
       .key(  .ctrl,  traits: .defaultSuggestionsOnly),
@@ -406,6 +412,8 @@ extension KBLayout {
       .wideKey(.esc,  traits: .default),
       .wideKey(.ctrl, traits: .default),
       .wideKey(.alt,  traits: .default),
+      .icon(.tmuxMenu, traits: .default),
+      .icon(.mic, traits: .default),
 
       .wideKey(.esc,  traits: .defaultSuggestionsOnly),
       .wideKey(.ctrl, traits: .defaultSuggestionsOnly),

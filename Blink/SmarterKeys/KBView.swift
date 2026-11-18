@@ -44,6 +44,7 @@ class KBView: UIView {
   private var _timer: Timer? = nil
   private var _repeatingKeyView: KBKeyView? = nil
   private var _commandPressTimestamp: TimeInterval = 0
+  private var _useFloatingDPad = BKUserConfigurationManager.userSettingsValue(forKey: BKUserConfigUseFloatingDPad)
   //private var _glassEffectView: UIVisualEffectView?
   
   var repeatingSequence: String? = nil
@@ -93,6 +94,9 @@ class KBView: UIView {
     
     
     super.init(frame: frame)
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(_userConfigurationChanged),
+      name: NSNotification.Name.BKUserConfigChanged, object: nil)
     _scrollView.alwaysBounceVertical = false
     _scrollView.alwaysBounceHorizontal = false
     _scrollView.isDirectionalLockEnabled = true
@@ -126,6 +130,25 @@ class KBView: UIView {
   
   required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
+  }
+
+  deinit {
+    NotificationCenter.default.removeObserver(self)
+    _timer?.invalidate()
+  }
+
+  @objc private func _userConfigurationChanged() {
+    let enabled = BKUserConfigurationManager.userSettingsValue(forKey: BKUserConfigUseFloatingDPad)
+    guard enabled != _useFloatingDPad else { return }
+    _useFloatingDPad = enabled
+    // Cancel touches and the swipe control's own timer before replacing its view.
+    for keyView in _leftSection.views + _middleSection.views + _rightSection.views {
+      keyView.turnOff()
+    }
+    reset()
+    _onModifiersSet.removeAll()
+    _untrackedModifiersSet.removeAll()
+    _updateSections()
   }
   
   // @available(iOS 26.0, *)
@@ -346,6 +369,20 @@ extension KBView: UIScrollViewDelegate {
 }
 
 extension KBView: KBKeyViewDelegate {
+  // Sequence the tmux menu key sends. Defaults to backtick + space (tmux
+  // prefix + Space with the tm-applied config). Override without a rebuild by
+  // writing hex bytes to <blink home>/tmux_key, e.g. `echo 6020 > ~/tmux_key`
+  // from inside Blink. Read per-tap so edits apply immediately.
+  static func _tmuxMenuHex() -> String {
+    let fallback = "6020"
+    guard let url = BlinkPaths.blinkURL()?.appendingPathComponent("tmux_key"),
+          let raw = try? String(contentsOf: url, encoding: .utf8)
+    else { return fallback }
+    let hex = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    let isHex = !hex.isEmpty && hex.count % 2 == 0 && hex.allSatisfy(\.isHexDigit)
+    return isHex ? hex : fallback
+  }
+
   
   func keyViewAskedToCancelScroll(keyView: KBKeyView) {
     _scrollView.panGestureRecognizer.dropTouches()
@@ -425,6 +462,17 @@ extension KBView: KBKeyViewDelegate {
   }
   
   func keyViewTriggered(keyView: KBKeyView, value: KBKeyValue) {
+    if value == .dPad {
+      var responder: UIResponder? = keyInput
+      while let current = responder {
+        if let controller = current as? SpaceController {
+          controller.toggleDPadAction(keyInput)
+          break
+        }
+        responder = current.next
+      }
+      return
+    }
     if value.isModifier {
       return
     }
@@ -432,6 +480,11 @@ extension KBView: KBKeyViewDelegate {
       stopRepeats()
     }
 
+    sendKey(value)
+  }
+
+  // Keep floating controls on the same modifier and terminal encoding path as Smart Keys.
+  func sendKey(_ value: KBKeyValue) {
     defer { turnOffUntracked() }
 
     guard let keyInput = keyInput
@@ -447,7 +500,7 @@ extension KBView: KBKeyViewDelegate {
     // tmux action menu key: emit backtick + space (tmux prefix + Space) as raw
     // bytes, the same path Custom Presses use, so tmux opens its display-menu.
     if case .tmuxMenu = value {
-      keyInput.reportHex("6020")
+      keyInput.reportHex(Self._tmuxMenuHex())
       return
     }
 
