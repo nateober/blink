@@ -43,6 +43,7 @@ App Store** (GPL code he doesn't own + App-Store-terms conflict + "Blink" tradem
 - `raw` is the baseline and holds everything shipped (pushed to GitHub 2026-11-18).
 - **Upstream draft PR:** the dictation key alone is offered to blinksh/blink as draft PR #2297
   from branch `voice-key-upstream`. Changes the maintainer asks for go on that branch, not `raw`.
+  The iPad key-row fix is draft PR #2311 from branch `fix/ipad-smartkeys-upstream` (same rule).
 
 ## Open items — these need NATE (surface them at the start of a fresh session)
 0. **Restart Ada's tmux server** when no session matters (`tmux kill-server` ends them all):
