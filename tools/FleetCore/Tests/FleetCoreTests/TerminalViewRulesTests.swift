@@ -37,4 +37,14 @@ final class TerminalViewRulesTests: XCTestCase {
     XCTAssertTrue(ScrollRules.reportsScroll(gridHeld: true, movedForPage: true))
     XCTAssertFalse(ScrollRules.reportsScroll(gridHeld: true, movedForPage: false))
   }
+
+  // docs/bugs.md 2026-11-18: the iPad key toolbar never showed because nothing told the
+  // app the keyboard on screen was a software one.
+  func testKeyboardFrameHeightTellsSoftwareFromHardware() {
+    XCTAssertEqual(KeyboardRules.isHardwareKeyboard(frameHeight: 69), true)
+    XCTAssertEqual(KeyboardRules.isHardwareKeyboard(frameHeight: 55), true)
+    XCTAssertEqual(KeyboardRules.isHardwareKeyboard(frameHeight: 320), false)
+    XCTAssertEqual(KeyboardRules.isHardwareKeyboard(frameHeight: 471), false)
+    XCTAssertNil(KeyboardRules.isHardwareKeyboard(frameHeight: 0))
+  }
 }

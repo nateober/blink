@@ -38,3 +38,13 @@ public enum ResizeRules {
     sceneState ?? true
   }
 }
+
+public enum KeyboardRules {
+  /// Whether the keyboard frame iOS reports belongs to a hardware keyboard. With one
+  /// attached the "keyboard" is only the shortcuts bar (about 55 to 70 points); an
+  /// on-screen keyboard, docked or floating, is far taller. Nil when the frame says
+  /// nothing (an empty frame, sent while the keyboard is being torn down).
+  public static func isHardwareKeyboard(frameHeight: Double) -> Bool? {
+    frameHeight > 0 ? frameHeight < 150 : nil
+  }
+}
