@@ -83,6 +83,7 @@ enum KBKeyValue: Hashable, Identifiable, Codable {
   case hideKB
   case tmuxMenu
   case mic
+  case dPad
   case text(value: String)
   case f(Int8)
   
@@ -102,6 +103,7 @@ enum KBKeyValue: Hashable, Identifiable, Codable {
     case .hideKB: return "hideKB"
     case .tmuxMenu: return "tmuxMenu"
     case .mic: return "mic"
+    case .dPad: return "dPad"
     case .text(let value): return value
     case .f(let value): return "F\(value)"
     }
@@ -167,6 +169,7 @@ enum KBKeyValue: Hashable, Identifiable, Codable {
     case .hideKB: return "Hide Keyboard"
     case .tmuxMenu: return "tmux menu"
     case .mic: return "Dictate"
+    case .dPad: return "Show D-pad"
     case .text(let value): return value
     case .f(let value): return "F\(value)"
     }
@@ -212,6 +215,7 @@ enum KBKeyValue: Hashable, Identifiable, Codable {
     case .hideKB: return "keyboard.chevron.compact.down"
     case .tmuxMenu: return "line.3.horizontal"
     case .mic: return "mic.fill"
+    case .dPad: return "dpad"
     default:      return nil
     }
   }
@@ -227,7 +231,7 @@ enum KBKeyValue: Hashable, Identifiable, Codable {
   }
   
   static var specials: [Self] {
-    [.cmd, .alt, .ctrl, .esc, .tab, .left, .right, .up, .down, .copy, .paste, .hideKB, .tmuxMenu, .mic]
+    [.cmd, .alt, .ctrl, .esc, .tab, .left, .right, .up, .down, .copy, .paste, .hideKB, .tmuxMenu, .mic, .dPad]
   }
   
   var isModifier: Bool {

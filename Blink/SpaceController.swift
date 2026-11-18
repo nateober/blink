@@ -69,6 +69,7 @@ class SpaceController: UIViewController {
   private let _voiceStrip = VoiceStripView()
   private var _micPress = MicInteraction()
   private var _voiceDelivery = VoiceDelivery<TermDevice>()
+  private var _dPad: KBDPadView?
   private var _spaceControllerAnimating: Bool = false
   var stuckKeyCode: KeyCode? = nil
   
@@ -198,6 +199,7 @@ class SpaceController: UIViewController {
   
   public override func viewDidLayoutSubviews() {
     super.viewDidLayoutSubviews()
+    _dPad?.constrainPosition(to: safeFrame)
     
     guard let window = view.window
     else {
@@ -352,7 +354,43 @@ class SpaceController: UIViewController {
     case .none: break
     }
   }
+
+  @objc func toggleDPadAction(_ sender: Any?) {
+    guard BKUserConfigurationManager.userSettingsValue(forKey: BKUserConfigUseFloatingDPad) else {
+      return
+    }
+    if let dPad = _dPad {
+      dPad.stopRepeating()
+      dPad.isHidden.toggle()
+      if !dPad.isHidden {
+        view.bringSubviewToFront(dPad)
+        dPad.constrainPosition(to: safeFrame)
+      }
+      return
+    }
+
+    let dPad = KBDPadView()
+    dPad.inputProvider = { [weak self] in
+      guard let self = self, self.canTerminalBecomeFirstResponder,
+            self.presentedViewController == nil,
+            self.view.window?.windowScene?.activationState == .foregroundActive else {
+        return nil
+      }
+      return self.currentTerm()?.termView.webView
+    }
+    _dPad = dPad
+    view.addSubview(dPad)
+    dPad.constrainPosition(to: safeFrame)
+    dPad.resetPosition()
+  }
   
+  @objc private func _dPadConfigurationChanged() {
+    if !BKUserConfigurationManager.userSettingsValue(forKey: BKUserConfigUseFloatingDPad) {
+      _dPad?.stopRepeating()
+      _dPad?.isHidden = true
+    }
+  }
+
   deinit {
     NotificationCenter.default.removeObserver(self)
   }
@@ -487,6 +525,8 @@ Please go to your subscriptions and cancel one of them!
   
   func _registerForNotifications() {
     let nc = NotificationCenter.default
+    nc.addObserver(self, selector: #selector(_dPadConfigurationChanged),
+                   name: NSNotification.Name.BKUserConfigChanged, object: nil)
     
     nc.addObserver(self,
                    selector: #selector(_didBecomeKeyWindow),
