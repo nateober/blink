@@ -32,8 +32,10 @@ def exit_counts(section):
 
 def summarize_metrics(data):
     lines = []
-    meta = data.get("metaInformation") or {}
-    build = meta.get("applicationBuildVersion") or data.get("appBuildVersion") or "?"
+    # MetricKit's JSON puts the build under metaData (seen in the phone's reports, 2026-11).
+    meta = data.get("metaData") or data.get("metaInformation") or {}
+    build = (meta.get("appBuildVersion") or meta.get("applicationBuildVersion")
+             or data.get("appBuildVersion") or "?")
     span = f"{data.get('timeStampBegin', '?')} to {data.get('timeStampEnd', '?')}"
     lines.append(f"metrics, build {build}, {span}")
     exits = data.get("applicationExitMetrics") or {}

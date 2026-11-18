@@ -9,7 +9,7 @@ spec.loader.exec_module(bd)
 
 METRICS = {
     "timeStampBegin": "2026-11-12 00:00:00 +0000", "timeStampEnd": "2026-11-13 00:00:00 +0000",
-    "metaInformation": {"applicationBuildVersion": "1130"},
+    "metaData": {"appBuildVersion": "1130", "osVersion": "iPhone OS 27.2.1 (24B156)"},
     "applicationExitMetrics": {
         "foregroundExitData": {"cumulativeNormalAppExitCount": 0, "cumulativeMemoryResourceLimitExitCount": 2},
         "backgroundExitData": {"cumulativeMemoryPressureExitCount": 3, "cumulativeAppWatchdogExitCount": 1,
