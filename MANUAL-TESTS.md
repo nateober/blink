@@ -294,3 +294,11 @@ or Shift-Tab out of auto mode).
       says 3.8 and redraws while Claude streams flicker less than before.
 - [ ] New sessions show up in the Claude app's Code tab (Remote Control at startup).
 
+## Feature U: key row above the keyboard on iPad (build 1131)
+
+- [ ] On iPad with the on-screen keyboard, the row of keys (esc, ctrl, tab, `[ ] < >`, arrows)
+      sits above it in a terminal tab, and its keys type. Hide the keyboard and bring it back:
+      the row returns.
+- [ ] Attach a hardware keyboard: the row goes away. Detach it: the row comes back.
+- [ ] Floating keyboard and landscape still show the row.
+- [ ] iPhone: the key row is unchanged.

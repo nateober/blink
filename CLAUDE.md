@@ -33,6 +33,8 @@ App Store** (GPL code he doesn't own + App-Store-terms conflict + "Blink" tradem
   synchronized-output patch. Hosts: Claude Code fullscreen renderer and Remote Control at
   startup on Ada and Jarvis, tmux 3.8 installed (Ada's running server is 3.6a until restarted).
   Research and sources: `docs/research/2026-11-13-phone-experience.md`.
+- **Build 1131** (2026-11-18): the key row above the on-screen keyboard is back on iPad (it had
+  been missing since upstream's September 2025 keyboard refactor; `docs/bugs.md`).
 - **Build 1125** fixed frozen rows and stale frames after an app switch. Bugs Nate reports go in
   `docs/bugs.md`.
 - `raw` is the baseline and holds everything shipped. `feat/tmux-key-config` (iPad tmux key +
@@ -58,7 +60,7 @@ App Store** (GPL code he doesn't own + App-Store-terms conflict + "Blink" tradem
 ## Working here
 ```bash
 git checkout raw                              # baseline; branch new work off it
-swift test --package-path tools/FleetCore     # 135 tests = pure-logic verification path
+swift test --package-path tools/FleetCore     # 136 tests = pure-logic verification path
 uv run --with pytest pytest scripts/fleet -q   # host-side scripts (hook, push, session list)
 for t in tools/termjs-tests/*.test.js; do node "$t"; done   # terminal page
 # build for sim: xcodebuild ... -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' ENABLE_DEBUG_DYLIB=NO

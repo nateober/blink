@@ -228,6 +228,26 @@ class KBTracker: NSObject {
   
   
   @objc private func _keyboardWillChangeFrame(_ notification: Notification) {
+    _detectHardwareKB(notification)
+  }
+
+  /// On iPad the key row sits in the keyboard's assistant bar and is only offered while
+  /// `isHardwareKB` is false. The flag starts true and this is the one place that learns
+  /// otherwise (the caller of `detectHardwareKBWithSoftwareKBHeight` was lost in the
+  /// keyboard layout refactor). iPhone takes its key row from `kbTraits` and is left as is.
+  private func _detectHardwareKB(_ notification: Notification) {
+    guard
+      UIDevice.current.userInterfaceIdiom == .pad,
+      let frame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
+      let hardware = KeyboardRules.isHardwareKeyboard(frameHeight: Double(frame.height)),
+      detectHardwareKBWithHeight,
+      hardware != isHardwareKB
+    else {
+      return
+    }
+    isHardwareKB = hardware
+    // The assistant bar was built with the old answer; have it asked again.
+    input?.contentView()?.reloadInputViews()
   }
   
   @objc private func _keyboardDidChangeFrame(_ notification: Notification) {
@@ -239,6 +259,7 @@ class KBTracker: NSObject {
         return
     }
     
+    _detectHardwareKB(notification)
     
     if isHardwareKB {
       if kbTraits.isFloatingKB {
