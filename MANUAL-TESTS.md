@@ -302,3 +302,14 @@ or Shift-Tab out of auto mode).
 - [ ] Attach a hardware keyboard: the row goes away. Detach it: the row comes back.
 - [ ] Floating keyboard and landscape still show the row.
 - [ ] iPhone: the key row is unchanged.
+
+## Feature V: iPad keys, trackpad, D-pad (build 1132)
+
+- [ ] iPad key row has the tmux menu key and the mic key. The tmux key opens the tmux menu in
+      a tmux session; the mic key dictates as on iPhone.
+- [ ] iPad with a trackpad or mouse: Cmd-click on a link still opens it; a drag selects or
+      reports to the app in the terminal, and after the drag (or after leaving the app
+      mid-drag) scrolling still works.
+- [ ] iPhone: scrolling, selection and Cmd-click links behave as before (same code changed).
+- [ ] Settings > Smart Keys > Use floating D-pad: the arrows key in the row opens a
+      draggable pad of four arrow keys; turning the setting off puts the swipe arrows back.

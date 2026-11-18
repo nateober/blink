@@ -35,10 +35,12 @@ App Store** (GPL code he doesn't own + App-Store-terms conflict + "Blink" tradem
   Research and sources: `docs/research/2026-11-13-phone-experience.md`.
 - **Build 1131** (2026-11-18): the key row above the on-screen keyboard is back on iPad (it had
   been missing since upstream's September 2025 keyboard refactor; `docs/bugs.md`).
+- **Build 1132** (2026-11-18): tmux menu and mic keys on the iPad key row, upstream's
+  trackpad drag clean-up (`822e7777`), the optional floating D-pad from upstream PR 2291 (off
+  by default). Pre-release look at both device classes: `tools/sim-devices.sh`.
 - **Build 1125** fixed frozen rows and stale frames after an app switch. Bugs Nate reports go in
   `docs/bugs.md`.
-- `raw` is the baseline and holds everything shipped. `feat/tmux-key-config` (iPad tmux key +
-  file-configurable sequence) is still unreleased.
+- `raw` is the baseline and holds everything shipped (pushed to GitHub 2026-11-18).
 - **Upstream draft PR:** the dictation key alone is offered to blinksh/blink as draft PR #2297
   from branch `voice-key-upstream`. Changes the maintainer asks for go on that branch, not `raw`.
 
@@ -55,7 +57,7 @@ App Store** (GPL code he doesn't own + App-Store-terms conflict + "Blink" tradem
 2. **Install the host side on Max** when it is online:
    `scripts/fleet/install-agent-loop.sh --relay ada.ober`.
 3. **Build 1125's leave-and-return check** (Feature I), the dictation key's checklist (Feature E),
-   and whether `feat/tmux-key-config` ships.
+   and builds 1131 and 1132 on the iPad (Features U, V).
 
 ## Working here
 ```bash
